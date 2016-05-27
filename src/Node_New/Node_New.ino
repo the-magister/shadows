@@ -1,3 +1,32 @@
+// MGD:
+// use this to boostrap a new node.  Enter "A<byte>" on the serial line to program the nodeID
+// on the network.  After that, you should be able to upload either Node_Location or Node_Lights .hex
+// file using the Gateway_Programmer tool to those new node names.  
+
+// A10, A11, A12 sets up a node to be a Node_Location
+// A20, A21, A22 sets up a node to be a Node_Lights
+
+/*
+Physical layout:
+
+         20
+   12 -------- 11
+     \        /
+      \      / 
+    21 \    / 22
+        \  /
+         10
+
+Tens digit:
+  1 = nodes with ultrasound rangefinders (inputs)
+  2 = nodes with RGB LED strips (output)
+  
+Ones digit (with same tens digit):
+  +1 (modulo) = "to my right"/next
+  -1 (modulo) = "to my left"/previous
+
+*/ 
+
 // **********************************************************************************
 // This sketch is an example of how wireless programming can be achieved with a Moteino
 // that was loaded with a custom 1k bootloader (DualOptiboot) that is capable of loading
@@ -41,9 +70,10 @@
 #include <SPIFlash.h>      //get it here: https://www.github.com/lowpowerlab/spiflash
 #include <avr/wdt.h>
 #include <WirelessHEX69.h> //get it here: https://github.com/LowPowerLab/WirelessProgramming/tree/master/WirelessHEX69
+#include <EEPROM.h> 
 
 #define NODEID      123       // node ID used for this unit
-#define NETWORKID   250
+#define NETWORKID   157
 //Match frequency to the hardware version of the radio on your Moteino (uncomment one):
 //#define FREQUENCY   RF69_433MHZ
 //#define FREQUENCY   RF69_868MHZ
@@ -51,7 +81,7 @@
 #define IS_RFM69HW  //uncomment only for RFM69HW! Leave out if you have RFM69W!
 #define SERIAL_BAUD 115200
 #define ACK_TIME    30  // # of ms to wait for an ack
-#define ENCRYPTKEY "sampleEncryptKey" //(16 bytes of your choice - keep the same on all encrypted nodes)
+//#define ENCRYPTKEY "sampleEncryptKey" //(16 bytes of your choice - keep the same on all encrypted nodes)
 #define BLINKPERIOD 500
 
 #ifdef __AVR_ATmega1284P__
@@ -78,8 +108,19 @@ SPIFlash flash(FLASH_SS, 0xEF30); //EF30 for windbond 4mbit flash
 void setup(){
   pinMode(LED, OUTPUT);
   Serial.begin(SERIAL_BAUD);
-  radio.initialize(FREQUENCY,NODEID,NETWORKID);
-  radio.encrypt(ENCRYPTKEY); //OPTIONAL
+
+  byte myNodeID = readID();
+  if( myNodeID == 255 ) {
+    Serial.print("No node ID in EEPROM.  Defaulting to ");
+    Serial.println(NODEID);
+    myNodeID = NODEID;
+  } else {
+    Serial.print("Found node ID in EEPROM: ");
+    Serial.println(myNodeID);
+  }
+  
+  radio.initialize(FREQUENCY,myNodeID,NETWORKID);
+//  radio.encrypt(ENCRYPTKEY); //OPTIONAL
 #ifdef IS_RFM69HW
   radio.setHighPower(); //only for RFM69HW!
 #endif
@@ -89,6 +130,19 @@ void setup(){
     Serial.println("SPI Flash Init OK!");
   else
     Serial.println("SPI Flash Init FAIL!");
+}
+
+byte readID() {
+  // EEPROM location for radio settings.
+  const byte radioConfigLocation = 42;
+
+  return( EEPROM.read(radioConfigLocation) );
+}
+void writeID(byte nodeID) {
+  // EEPROM location for radio settings.
+  const byte radioConfigLocation = 42;
+
+  EEPROM.write(radioConfigLocation, nodeID);
 }
 
 void loop(){
@@ -131,10 +185,17 @@ void loop(){
       Serial.print("RFM69 registers:");
       radio.readAllRegs();
     }
-    else if (input >= 48 && input <= 57) //0-9
+    else if (input >= 48 && input <= 57) // 0-9
     {
       Serial.print("\nWriteByte("); Serial.print(input); Serial.print(")");
       flash.writeByte(input-48, millis()%2 ? 0xaa : 0xbb);
+    }
+    else if (input == 'A')
+    {
+      byte addr = Serial.parseInt();
+      Serial.print("Writing node address to EEPROM: ");
+      Serial.println(addr);
+      writeID(addr);
     }
   }
   
