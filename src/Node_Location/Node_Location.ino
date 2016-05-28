@@ -12,6 +12,9 @@
 
 #include "Location.h"
 
+// index accessor
+#define MY_I   N.whoAmI()-10
+
 void setup() {
   // need to very quickly prevent calibration on the range sensor, as we don't want them calibrating at the same time (interference)
   digitalWrite(RANGE_PIN, LOW);
@@ -34,7 +37,7 @@ void loop()
   // do I need to update the position information?
   if ( N.meNext() ) {
     // update distance
-    N.msg.d[N.whoAmI()-10] = L.readDistance();
+    N.msg.d[MY_I] = L.readDistance();
 
     // calculate positions
     L.calculatePosition( N.msg );
