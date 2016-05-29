@@ -73,6 +73,7 @@ void idleUpdate() {
 
   // do we detect something out there?
   if ( N.msg.d[MY_I] < MAX_Y*2 ) {
+    Serial << F("State.  idle->outPlane.") << endl;
     S.transitionTo( outPlane );
   }
 }
@@ -89,11 +90,13 @@ void outPlaneUpdate() {
 
   // do we detect nothing out there?
   if ( N.msg.d[MY_I] > MAX_Y*2 ) {
+    Serial << F("State.  outPlane->idle.") << endl;
     S.transitionTo( idle );
   }
 
   // do we detect something in the plane?
   if ( N.msg.d[0] < MAX_Y && N.msg.d[1] < MAX_Y && N.msg.d[2] < MAX_Y ) {
+    Serial << F("State.  outPlane->inPlane.") << endl;
     S.transitionTo( inPlane );
   }
 }
@@ -114,6 +117,7 @@ void inPlaneUpdate() {
   // do we detect something, but out of the plane?
   if ( N.msg.d[0] > MAX_Y || N.msg.d[1] > MAX_Y || N.msg.d[2] > MAX_Y ) {
     S.transitionTo( outPlane );
+    Serial << F("State.  inPlane->outPlane.") << endl;
   }
 }
 
