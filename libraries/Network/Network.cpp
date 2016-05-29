@@ -36,7 +36,7 @@ byte Network::whoAmI() {
 
 boolean Network::update() {
 	// new traffic?
-	if( radio.receiveDone() && radio.DATALEN==sizeof(Message) ) {   
+	if( radio.receiveDone() ) {   
 		if( radio.DATALEN==sizeof(Message) ) {
 			// read it
 			this->msg = *(Message*)radio.DATA;  
