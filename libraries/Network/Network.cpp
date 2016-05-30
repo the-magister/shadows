@@ -25,7 +25,11 @@ void Network::begin(byte groupID, byte freq, byte powerLevel) {
 	
 	this->inStartup = true; // bootstrap
 	
-	Serial << F("Radio. startup complete with node number=") << this->myNodeID << endl;
+	msg.d[0] = msg.d[1] = msg.d[2] = 255;
+	msg.inter[0] = msg.inter[1] = msg.inter[2] = 255;
+	msg.range[0] = msg.range[1] = msg.range[2] = 255;
+	
+	Serial << F("Network. startup complete with node number=") << this->myNodeID << endl;
 
   pinMode(LED, OUTPUT);
 }
@@ -36,7 +40,7 @@ byte Network::whoAmI() {
 
 boolean Network::update() {
 	// new traffic?
-	if( radio.receiveDone() && radio.DATALEN==sizeof(Message) ) {   
+	if( radio.receiveDone() ) {   
 		if( radio.DATALEN==sizeof(Message) ) {
 			// read it
 			this->msg = *(Message*)radio.DATA;  
@@ -60,6 +64,14 @@ boolean Network::update() {
 	return( false );
 }
 
+void Network::printMessage() {
+	Serial << F("Network. msg");
+	Serial << F("\td 0=") << msg.d[0] << F(" 1=") << msg.d[1] << F(" 2=") << msg.d[2];
+	Serial << F("\ti 0=") << msg.inter[0] << F(" 1=") << msg.inter[1] << F(" 2=") << msg.inter[2];
+	Serial << F("\tr 0=") << msg.range[0] << F(" 1=") << msg.range[1] << F(" 2=") << msg.range[2];
+	Serial << endl;
+}
+
 byte Network::isNext(byte node, byte maxNode, byte minNode) {
   // skipping modulo arithmetic to minimize instructions
   return( (node+1) == (maxNode+1) ? minNode : node+1 );
@@ -77,22 +89,21 @@ void Network::send() {
 	radio.send(BROADCAST, (const void*)(&msg), sizeof(Message));
 }
 
-byte Network::posX() {
-  return( this->msg.x[this->myNodeID-20] );
+byte Network::range() {
+  return( this->msg.range[this->myNodeID-20] );
 }
 
-byte Network::posY() {
-  return( this->msg.y[this->myNodeID-20] );
+byte Network::intercept() {
+  return( this->msg.inter[this->myNodeID-20] );
 }
 
-boolean Network::isObject(byte xMax, byte yMax) {
-  if( this->posX() <= xMax && this->posY() <= yMax ) {
-    return( true );
-  } else {
-    return( false );
-  }
+boolean Network::objectAnywhere() {
+  return( msg.d[0] < 254 || msg.d[1] < 254 || msg.d[2] < 254 );
 }
 
+boolean Network::objectInPlane() {
+  return( msg.d[0] <= BASE_LEN && msg.d[1] <= BASE_LEN && msg.d[2] <= BASE_LEN );
+}
 
 
 Network N;

@@ -28,7 +28,7 @@ byte Location::readDistance() {
 
 void Location::calculatePosition(Message msg) {
   // I'm going to avoid using sine and cosine, as those are heavy on a non-FPU machine
-  float A, y, x;
+  float A, y, x, inter, range;
   const float HALF_BASE = ((float)BASE_LEN)/2.0;
 
   // start by calculating x,y relative to Node_Light 20
@@ -37,25 +37,38 @@ void Location::calculatePosition(Message msg) {
 
   // determine the height of the triangle, given area and base
   y = yFromArea(A, BASE_LEN);
-  msg.y[0] = y>255 ? 255 : y;
-  
-  // determine the base of the triangle, given height and hypotenuse, subtracing mid point of Node_Light
-  x = xFromHeight(y, msg.d[1]) - HALF_BASE;
-  msg.x[0] = x>255 ? 255 : x;
+  // determine the base of the triangle, given height and hypotenuse
+  x = xFromHeight(y, msg.d[2]);
+
+  // we then have the x,y coordinates relative to left vertex
+
+  // compute the range of the object from the line, following the projected path from the sensor (cosine equivalence with right triangles)
+  range = (float)msg.d[0]*((float)HEIGHT_LEN/((float)HEIGHT_LEN-y)-1.0);
+
+  // compute the projected intersection with the line (sine equivalence with right triangles)
+  inter = x + range*(x-HALF_BASE)/(float)msg.d[0];
+
+  // update the message
+  msg.range[0] = range>255 ? 255 : range;
+  msg.inter[0] = inter>255 ? 255 : inter;
 
   // now x,y for Node_Light 21
   A = areaFromDistances(msg.d[2], msg.d[0], BASE_LEN);
   y = yFromArea(A, BASE_LEN);
-  msg.y[1] = y>255 ? 255 : y;
-  x = xFromHeight(y, msg.d[2]) - HALF_BASE;
-  msg.x[1] = x>255 ? 255 : x;
-  
+  x = xFromHeight(y, msg.d[0]);
+  range = (float)msg.d[1]*((float)HEIGHT_LEN/((float)HEIGHT_LEN-y)-1.0);
+  inter = x + range*(x-HALF_BASE)/(float)msg.d[1];
+  msg.range[1] = range>255 ? 255 : range;
+  msg.inter[1] = inter>255 ? 255 : inter;
+ 
   // now x,y for Node_Light 22
   A = areaFromDistances(msg.d[0], msg.d[1], BASE_LEN);
   y = yFromArea(A, BASE_LEN);
-  msg.y[2] = y>255 ? 255 : y;
-  x = xFromHeight(y, msg.d[0]) - HALF_BASE;
-  msg.x[2] = x>255 ? 255 : x;
+  x = xFromHeight(y, msg.d[2]);
+  range = (float)msg.d[1]*((float)HEIGHT_LEN/((float)HEIGHT_LEN-y)-1.0);
+  inter = x + range*(x-HALF_BASE)/(float)msg.d[2];
+  msg.range[2] = range>255 ? 255 : range;
+  msg.inter[2] = inter>255 ? 255 : inter;
 }
 
 float Location::areaFromDistances(float lA, float lB, float lC) {

@@ -28,7 +28,7 @@ FASTLED_USING_NAMESPACE
 class Animation {
   public:
     // initialize led strips
-    void begin(byte startPos=NUM_LEDS/2, byte startSpark=50, byte startCooling=55);
+    void begin(byte startPos=NUM_LEDS/2, byte startIntensity=0);
     // which calls the following functions with their defaults:
     
     // set frames per second
@@ -41,8 +41,7 @@ class Animation {
     
     // animation control
     void fadePositionTo(byte pixel);
-    void fadeSparksTo(byte spark);
-    void fadeCoolingTo(byte cooling);
+    void fadeIntensityTo(byte intensity);
     
     // updates the animation
     void update();
@@ -51,8 +50,10 @@ class Animation {
     Metro pushNextFrame;
 
     byte currentPos, targetPos;
-    byte currentSpark, targetSpark;
-    byte currentCooling, targetCooling;
+    byte currentIntensity, targetIntensity;
+
+    byte flareProb;
+    byte fps;
 };
 
 extern Animation A;

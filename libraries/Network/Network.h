@@ -19,9 +19,9 @@
 #define POWERLEVEL 31 // 0-31, 31 being maximal
 
 typedef struct {
-  byte x[3];  // x location relative to midpoint of lights; pull by x[this->myNodeID-20]
-  byte y[3];  // y location relative to midpoint of lights; pull by y[this->myNodeID-20]
   byte d[3];  // distance relative to sensors; pull by d[this->myNodeID-10]
+  byte inter[3];  // projected intersection on lights; pull by x[this->myNodeID-20]
+  byte range[3];  // projected distnace lights; pull by y[this->myNodeID-20]
 } Message;
 
 #define LED           9 // Moteinos have LED on D9
@@ -71,6 +71,8 @@ class Network {
     boolean update();
     // make the location message available for direct update by Node_Location
     Message msg;
+	// show the contents of the message
+	void printMessage();
 
     // for Node_Location
     // am I next to transmit distance information?
@@ -79,11 +81,13 @@ class Network {
     void send();
 
     // for Node_Lights
+	// is there an object outside the plane?
+	boolean objectAnywhere();
     // is there an object in the plane?
-    boolean isObject(byte xMax=BASE_LEN/2, byte yMax=BASE_LEN);
-    // return the position information, relative to my lighting centerpoint
-    byte posX();
-    byte posY();
+    boolean objectInPlane();
+    // return the positional information, relative to me
+    byte intercept();
+    byte range();
     
   private:
     boolean inStartup;

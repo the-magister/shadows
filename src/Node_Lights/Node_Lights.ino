@@ -22,30 +22,30 @@ State outPlane = State(outPlaneUpdate); // sensors are picking up an object, but
 State inPlane = State(inPlaneUpdate); // sensors are picking up an object, and it's within the place of the triangle
 FSM S = FSM(idle); // start idle
 
-// define the extents of the plane
-#define MIN_X   -BASE_LEN/2
-#define MID_X   0
-#define MAX_X   BASE_LEN/2
-
-#define MIN_Y   0
-#define MID_Y   HEIGHT_LEN/2
-#define MAX_Y   HEIGHT_LEN
-
-// sparking levels 
-#define MAX_SPARK   200
-#define MIN_SPARK   50
+// intensity levels 
+#define MAX_INTENSITY   255
+#define MIN_INTENSITY   0
 
 // index accessor
 #define MY_I   N.whoAmI()-20
 
 void setup() {
-  // give the distance sensors enough time to calibrate and start sending meaningful x,y calculations
-  delay(1000);
-  
+
   Serial.begin(115200);
 
+  Serial << F("main.  location calibrations: ");
+  Serial << F("\tX=") << 0 << F(" -> P=") << mapXtoPixel(0);
+  Serial << F("\tX=") << BASE_LEN/2 << F(" -> P=") << mapXtoPixel(BASE_LEN/2);
+  Serial << F("\tX=") << BASE_LEN << F(" -> P=") << mapXtoPixel(BASE_LEN);
+  Serial << endl;
+  
   // start the radio
   N.begin();
+
+  // give the distance sensors enough time to calibrate and start sending meaningful x,y calculations
+  // AND enough time to get a reprogram signal
+  Metro startupDelay(1000UL);
+  while(! startupDelay.check()) N.update();
 
   // startup animation
   A.begin();
@@ -64,15 +64,16 @@ void loop() {
 
 void idleUpdate() {
   // drive the shadow back to the middle
-  A.fadePositionTo(mapXtoPixel(MID_X));
+  A.fadePositionTo(mapXtoPixel(BASE_LEN/2));
 
-  // drive the heat back to baseline
-  A.fadeSparksTo(MIN_SPARK);
+  // drive the intensity back to baseline
+  A.fadeIntensityTo(MIN_INTENSITY);
 
   // check for state changes
 
   // do we detect something out there?
-  if ( N.msg.d[MY_I] < MAX_Y*2 ) {
+  if ( N.objectAnywhere() ) {
+    N.printMessage();
     Serial << F("State.  idle->outPlane.") << endl;
     S.transitionTo( outPlane );
   }
@@ -81,41 +82,40 @@ void idleUpdate() {
 
 void outPlaneUpdate() {
   // drive the shadow back to the middle
-  A.fadePositionTo(mapXtoPixel(MID_X));
+  A.fadePositionTo(mapXtoPixel(BASE_LEN/2));
 
   // drive the heat up or down, depending on distance sensors
-  A.fadeSparksTo(mapDtoSpark(N.msg.d[MY_I] - MAX_Y));
+  A.fadeIntensityTo(mapDtoIntensity(N.msg.d[MY_I] - BASE_LEN));
 
   // check for state changes
 
   // do we detect nothing out there?
-  if ( N.msg.d[MY_I] > MAX_Y*2 ) {
+  if ( ! N.objectAnywhere() ) {
+    N.printMessage();
     Serial << F("State.  outPlane->idle.") << endl;
     S.transitionTo( idle );
   }
 
   // do we detect something in the plane?
-  if ( N.msg.d[0] < MAX_Y && N.msg.d[1] < MAX_Y && N.msg.d[2] < MAX_Y ) {
+  if ( N.objectInPlane() ) {
+    N.printMessage();
     Serial << F("State.  outPlane->inPlane.") << endl;
     S.transitionTo( inPlane );
   }
 }
 
 void inPlaneUpdate() {
-  // pull my x, y and distance information
-  int xp = projectObjectX(N.msg.x[MY_I], N.msg.y[MY_I]);
-  int dp = projectObjectDistance(N.msg.d[MY_I], N.msg.y[MY_I]);
-
   // drive shadow location according to x'
-  A.fadePositionTo(mapXtoPixel(xp));
+  A.fadePositionTo(mapXtoPixel(N.intercept()));
 
-  // drive the heat according to distance d'
-  A.fadeSparksTo(mapDtoSpark(dp));
-  
+  // drive the intensity according to distance d'
+  A.fadeIntensityTo(mapDtoIntensity(N.range()));
+
   // check for state changes
 
   // do we detect something, but out of the plane?
-  if ( N.msg.d[0] > MAX_Y || N.msg.d[1] > MAX_Y || N.msg.d[2] > MAX_Y ) {
+  if ( ! N.objectInPlane() ) {
+    N.printMessage();
     S.transitionTo( outPlane );
     Serial << F("State.  inPlane->outPlane.") << endl;
   }
@@ -125,16 +125,16 @@ void inPlaneUpdate() {
 /* Diagram of the pixel location as a function of the object location
 
 Location:  left edge ----------------- right edge
-X:         MIN_X              0             MAX_Y
-Pixel:     0                                NUM_LEDS-1 
+X:         0                             BASE_LEN
+Pixel:     0                           NUM_LEDS-1 
 
  */
 byte mapXtoPixel(int x) {
   // map with constraint
   return(
     map(
-      constrain(x, MIN_X, MAX_X),  // constrain x to be [MIN_X, MAX_X]
-      MIN_X, MAX_X, // map [MIN_X, MAX_X]
+      constrain(x, 0, BASE_LEN),  // constrain x to be [0, BASE_LEN]
+      0, BASE_LEN, // map [0, BASE_LEN]
       0, NUM_LEDS-1 // to [0, NUM_LEDS-1]
     )
   );
@@ -149,31 +149,15 @@ Y:         MAX_Y        MID_Y         MIN_Y                     MAX_Y*2
 Spark:     MIN_SPARK                 MAX_SPARK                     MIN_SPARK                    MIN_SPARK
                 
  */
-byte mapDtoSpark(byte d) {
+byte mapDtoIntensity(byte d) {
   // map with constraint
   return(
       map(
-        constrain(d, MIN_Y, MAX_Y), // constrain d to be [MIN_Y, MAX_Y]
-        MIN_Y, MAX_Y, // map [MIN_Y, MAX_Y]
-        MAX_SPARK, MIN_SPARK
+        constrain(d, 0, HEIGHT_LEN), // constrain d to be [MIN_Y, MAX_Y]
+        0, HEIGHT_LEN, // map [0, HEIGHT_LEN]
+        MAX_INTENSITY, MIN_INTENSITY
       )
   );
 }
-
-// helper function to project object (x,y) to (x',0); returns x'
-int projectObjectX(int x, int y) {
-  // tanget rule for right triangles, without all of the tedious angles
-  float projX = (float)x * (float)MAX_Y/((float)MAX_Y - (float)y);
-  return( projX );
-}
-
-// helper function to return distance from object (x,y) to (x',0); returns distance 
-int projectObjectDistance(int d, int y) {
-  // cosine rule for right triangles, without all of the tedious angles
-  float projD = (float)d * ( (float)MAX_Y/((float)MAX_Y - (float)y) - 1.0 );
-  return( projD );
-}
-
-
 
 
