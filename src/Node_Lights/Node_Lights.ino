@@ -22,13 +22,6 @@ State outPlane = State(outPlaneUpdate); // sensors are picking up an object, but
 State inPlane = State(inPlaneUpdate); // sensors are picking up an object, and it's within the place of the triangle
 FSM S = FSM(idle); // start idle
 
-// intensity levels 
-#define MAX_INTENSITY   255
-#define MIN_INTENSITY   0
-
-// index accessor
-#define MY_I   N.whoAmI()-20
-
 void setup() {
 
   Serial.begin(115200);
@@ -42,8 +35,7 @@ void setup() {
   // start the radio
   N.begin();
 
-  // give the distance sensors enough time to calibrate and start sending meaningful x,y calculations
-  // AND enough time to get a reprogram signal
+  // wait enough time to get a reprogram signal
   Metro startupDelay(1000UL);
   while(! startupDelay.check()) N.update();
 
@@ -63,12 +55,9 @@ void loop() {
 }
 
 void idleUpdate() {
-  // drive the shadow back to the middle
-  A.fadePositionTo(mapXtoPixel(BASE_LEN/2));
-
   // drive the intensity back to baseline
-  A.fadeIntensityTo(MIN_INTENSITY);
-
+  A.fadeIntensityTo( 0 );
+ 
   // check for state changes
 
   // do we detect something out there?
@@ -76,16 +65,14 @@ void idleUpdate() {
     N.printMessage();
     Serial << F("State.  idle->outPlane.") << endl;
     S.transitionTo( outPlane );
+    A.setAnimation( A_OUTPLANE, false );
   }
 }
 
 
 void outPlaneUpdate() {
-  // drive the shadow back to the middle
-  A.fadePositionTo(mapXtoPixel(BASE_LEN/2));
-
   // drive the heat up or down, depending on distance sensors
-  A.fadeIntensityTo(mapDtoIntensity(N.msg.d[MY_I] - BASE_LEN));
+  A.fadeIntensityTo( 255-N.distance() );
 
   // check for state changes
 
@@ -94,6 +81,7 @@ void outPlaneUpdate() {
     N.printMessage();
     Serial << F("State.  outPlane->idle.") << endl;
     S.transitionTo( idle );
+    A.setAnimation( A_IDLE, false );
   }
 
   // do we detect something in the plane?
@@ -101,23 +89,25 @@ void outPlaneUpdate() {
     N.printMessage();
     Serial << F("State.  outPlane->inPlane.") << endl;
     S.transitionTo( inPlane );
+    A.setAnimation( A_INPLANE );
   }
 }
 
 void inPlaneUpdate() {
-  // drive shadow location according to x'
-  A.fadePositionTo(mapXtoPixel(N.intercept()));
+  // drive shadow location according to intercept
+  A.fadePositionTo(mapXtoPixel( N.intercept() ));
 
-  // drive the intensity according to distance d'
-  A.fadeIntensityTo(mapDtoIntensity(N.range()));
+  // drive the intensity according to range
+  A.fadeIntensityTo(mapDtoIntensity( N.range() ));
 
   // check for state changes
 
   // do we detect something, but out of the plane?
   if ( ! N.objectInPlane() ) {
     N.printMessage();
-    S.transitionTo( outPlane );
     Serial << F("State.  inPlane->outPlane.") << endl;
+    S.transitionTo( outPlane );
+    A.setAnimation( A_OUTPLANE );
   }
 }
 
@@ -141,21 +131,20 @@ byte mapXtoPixel(int x) {
 }
 
 // helper function to map distance to spark intensity
-/*  Diagram of the spark intensity as a function of distance to plane:
+/*  Diagram of the intensity as a function of distance to plane:
 
-State:       /----- inPlane -------\     /---- outPlane -----\          /----- idle -----\        
-Location: Sensor ---------------> Plane Edge ------------> Edge of Detection ----------> No Detection
-Y:         MAX_Y        MID_Y         MIN_Y                     MAX_Y*2
-Spark:     MIN_SPARK                 MAX_SPARK                     MIN_SPARK                    MIN_SPARK
+Location: Sensor ---------------> Plane Edge
+distance: 0            [HEIGHT_LEN, BASE_LEN]
+range:    [HEIGHT_LEN, BASE_LEN]           0              
                 
  */
-byte mapDtoIntensity(byte d) {
+byte mapDtoIntensity(byte r) {
   // map with constraint
   return(
       map(
-        constrain(d, 0, HEIGHT_LEN), // constrain d to be [MIN_Y, MAX_Y]
-        0, HEIGHT_LEN, // map [0, HEIGHT_LEN]
-        MAX_INTENSITY, MIN_INTENSITY
+        constrain(r, 0, BASE_LEN), // constrain r to be [0, BASE_LEN]
+        0, BASE_LEN, // map [0, BASE_LEN]
+        0, 255 // to [0,255]
       )
   );
 }

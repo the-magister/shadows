@@ -77,7 +77,7 @@ class Network {
     // for Node_Location
     // am I next to transmit distance information?
     boolean meNext();
-    // send location information
+   // send location information
     void send();
 
     // for Node_Lights
@@ -86,6 +86,7 @@ class Network {
     // is there an object in the plane?
     boolean objectInPlane();
     // return the positional information, relative to me
+	byte distance();
     byte intercept();
     byte range();
     

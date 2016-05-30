@@ -13,16 +13,17 @@
 class Location {
   public:
     // initialize location
-    void begin();
+    void begin(byte myNodeID);
 
     // read distance
-    byte readDistance();
+    void readDistance(Message msg);
 
     // calculate positions
     void calculatePosition(Message msg);
     
   private:
     byte rangePin, pwPin;
+    byte myIndex;
     boolean calibrated;
     
     float areaFromDistances(float lA, float lB, float lC);

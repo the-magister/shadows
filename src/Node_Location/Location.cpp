@@ -1,16 +1,20 @@
 #include "Location.h"
 
-void Location::begin() {
+void Location::begin(byte myNodeID) {
   Serial << F("Location. startup with rangePin=") << rangePin << F(" and pwPin=") << pwPin << endl;
 
   pinMode(PW_PIN, INPUT);
   digitalWrite(RANGE_PIN, LOW);
   pinMode(RANGE_PIN, OUTPUT);
 
+  // index accessor
+  this->myIndex = N.whoAmI()-10;
+  Serial << F("Location.  storing distance information in messsage index=") << this->myIndex << endl;
+
   this->calibrated = false;
 }
 
-byte Location::readDistance() {
+void Location::readDistance(Message msg) {
   // do we need the initial calibration?
   if( !this->calibrated ) {
     this->calibrated = true;
@@ -23,7 +27,7 @@ byte Location::readDistance() {
   float inches = pulseIn(PW_PIN, HIGH) / 147.0;
   digitalWrite(RANGE_PIN, LOW); // stop ranging
 
-  return( inches>255 ? 255 : inches );
+  msg.d[this->myIndex] = inches>255 ? 255 : inches;
 }
 
 void Location::calculatePosition(Message msg) {

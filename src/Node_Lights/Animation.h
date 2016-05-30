@@ -25,10 +25,19 @@
 
 FASTLED_USING_NAMESPACE
 
+// enumerate animation modes
+enum animation_t {
+  A_IDLE=0,
+  A_OUTPLANE,
+  A_INPLANE,
+  
+  N_ANIMATIONS
+};
+
 class Animation {
   public:
     // initialize led strips
-    void begin(byte startPos=NUM_LEDS/2, byte startIntensity=0);
+    void begin(byte startPos=NUM_LEDS/2, byte startIntensity=0, byte startAnim=A_IDLE);
     // which calls the following functions with their defaults:
     
     // set frames per second
@@ -36,10 +45,8 @@ class Animation {
     // set master brightness
     void setMasterBrightness(byte masterBrightness=255);
 
-    // animation function
-    void fireAnimation();
-    
     // animation control
+    void setAnimation(byte animation=A_IDLE, boolean clearStrip=true);
     void fadePositionTo(byte pixel);
     void fadeIntensityTo(byte intensity);
     
@@ -49,11 +56,16 @@ class Animation {
   private:
     Metro pushNextFrame;
 
+    byte anim;
+    
     byte currentPos, targetPos;
     byte currentIntensity, targetIntensity;
 
-    byte flareProb;
     byte fps;
+
+    // animation layer
+    void aCylon(byte bpm, byte bright);
+    void aProjection(byte pos, byte diffuse);
 };
 
 extern Animation A;

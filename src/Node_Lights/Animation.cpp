@@ -7,7 +7,7 @@ FASTLED_USING_NAMESPACE
 CRGB leds[NUM_LEDS];
 
 // startup
-void Animation::begin(byte startPos, byte startIntensity) {
+void Animation::begin(byte startPos, byte startIntensity, byte startAnim) {
   // tell FastLED about the LED strip configuration; mirrored strips
   FastLED.addLeds<APA102, PIN_DATA1, PIN_CLK>(leds, NUM_LEDS).setCorrection(TypicalSMD5050);
   FastLED.addLeds<APA102, PIN_DATA2, PIN_CLK>(leds, NUM_LEDS).setCorrection(TypicalSMD5050);
@@ -19,6 +19,8 @@ void Animation::begin(byte startPos, byte startIntensity) {
 
   this->currentPos = this->targetPos = startPos;
   this->currentIntensity = this->targetIntensity = startIntensity;
+
+  this->setAnimation(startAnim);
 
   Serial << F("Animation. Startup complete.") << endl;
 }
@@ -35,6 +37,27 @@ void Animation::setMasterBrightness(byte masterBrightness) {
   // set master brightness control
   FastLED.setBrightness(masterBrightness);
   Serial << F("Animation. Master brightness= ") << masterBrightness << endl;
+}
+
+void Animation::setAnimation(byte animation, boolean clearStrip) {
+
+  this->anim = animation;
+
+  if ( clearStrip ) fill_solid(leds, NUM_LEDS, CRGB(0, 0, 0));
+}
+
+void Animation::fadePositionTo(byte pixel) {
+  if ( this->targetPos != pixel ) {
+    Serial << F("Animation. fadePositionTo= ") << pixel << endl;
+    this->targetPos = pixel;
+  }
+}
+
+void Animation::fadeIntensityTo(byte intensity) {
+  if ( this->targetIntensity != intensity ) {
+    Serial << F("Animation. fadeIntensityTo= ") << intensity << endl;
+    this->targetIntensity = intensity;
+  }
 }
 
 // runs the animation
@@ -57,9 +80,28 @@ void Animation::update() {
     } else if ( this->currentIntensity < this->targetIntensity ) {
       this->currentIntensity++;
     }
-    
-    this->fireAnimation();
 
+    switch ( anim ) {
+      case A_IDLE:
+        aCylon( 
+          map(this->currentIntensity, 0, 255, 13, 40), 
+          map(this->currentIntensity, 0, 255, 64, 255)
+          );
+        break;
+      case A_OUTPLANE:
+        aCylon( 
+          map(this->currentIntensity, 0, 255, 13, 40), 
+          map(this->currentIntensity, 0, 255, 64, 255)
+          );
+        break;
+      case A_INPLANE:
+        aProjection( 
+          this->currentPos,
+          map(this->currentIntensity, 0, 255, 12, 172)
+          );
+         break;
+    }
+    
     nextFrameReady = true;
   }
 
@@ -72,20 +114,37 @@ void Animation::update() {
   }
 
 }
-void Animation::fadePositionTo(byte pixel) {
-  if ( this->targetPos != pixel ) {
-    Serial << F("Animation. fadePositionTo= ") << pixel << endl;
-    this->targetPos = pixel;
-  }
+
+void Animation::aCylon(byte bpm, byte bright) {
+  // a colored dot sweeping back and forth, with fading trails
+
+  // fade everything
+  fadeToBlackBy( leds, NUM_LEDS, bright/10 );
+
+  // set the speed the pixel travels base on intensity
+  byte posVal = beatsin8(bpm, 0, NUM_LEDS); // see: lib8tion.h
+
+  // cycle through hues, using intensity to set value
+  static byte hue = 0;
+  leds[posVal] = CHSV(hue++, 255, bright );
 }
 
-void Animation::fadeIntensityTo(byte intensity) {
-  if ( this->targetIntensity != intensity ) {
-    Serial << F("Animation. fadeIntensityTo= ") << intensity << endl;
-    this->targetIntensity = intensity;
-  }
+void Animation::aProjection(byte pos, byte diffuse) {
+  // a patch of color
+
+  // fade everything
+  fadeToBlackBy( leds, NUM_LEDS, 255 );
+
+  // cycle through hues, using intensity to set value
+  static byte hue = 0;
+  leds[pos] = CHSV(hue++, 255, 255);
+
+  // blur based on diffusion
+  blur1d( leds, NUM_LEDS, diffuse );
+  
 }
 
+/*
 void Animation::fireAnimation() {
 
   const CRGBPalette16 gPal = HeatColors_p;
@@ -95,7 +154,7 @@ void Animation::fireAnimation() {
   byte rightPos = constrain(this->currentPos + 1, 0, NUM_LEDS - 1);
 
   byte cooling = map(this->currentIntensity, 0, 255, 30, 10);
- 
+
   // Array of temperature readings at each simulation cell
   static byte heat[NUM_LEDS];
 
@@ -136,7 +195,6 @@ void Animation::fireAnimation() {
     leds[pixelnumber] = color;
   }
 
-/*
   static Metro dumpInterval(5000UL);
   if( dumpInterval.check() ) {
     Serial << F("Dump. leftPos=") << leftPos << F(" rightPos=") << rightPos;
@@ -144,8 +202,8 @@ void Animation::fireAnimation() {
 
     Serial << endl;
   }
-*/
 }
+*/
 
 Animation A;
 

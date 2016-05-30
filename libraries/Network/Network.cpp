@@ -3,19 +3,19 @@
 SPIFlash flash(FLASH_SS, FLASH_ID); 
 
 void Network::begin(byte groupID, byte freq, byte powerLevel) {
-  Serial << F("Network. startup.") << endl;
+	Serial << F("Network. startup.") << endl;
 
 	// EEPROM location for radio settings.
 	const byte radioConfigLocation = 42;
 	this->myNodeID = EEPROM.read(radioConfigLocation);
 	Serial << F("Network. read nodeID from EEPROM=") << this->myNodeID << endl;
 
-  if( this->myNodeID > 25 ) {
+	if( this->myNodeID > 25 ) {
 		Serial << F("Network. ERROR no nodeID found in EEPROM!") << endl;
-    Serial << F("Enter the node number for this node:") << endl;
-    while( ! Serial.available() );
-    EEPROM.write(radioConfigLocation, Serial.parseInt());
-    return( this->begin(groupID, freq, powerLevel) );
+		Serial << F("Enter the node number for this node:") << endl;
+		while( ! Serial.available() );
+		EEPROM.write(radioConfigLocation, Serial.parseInt());
+		return( this->begin(groupID, freq, powerLevel) );
 	}
 
 	radio.initialize(freq, this->myNodeID, groupID);
@@ -29,9 +29,9 @@ void Network::begin(byte groupID, byte freq, byte powerLevel) {
 	msg.inter[0] = msg.inter[1] = msg.inter[2] = 255;
 	msg.range[0] = msg.range[1] = msg.range[2] = 255;
 	
-	Serial << F("Network. startup complete with node number=") << this->myNodeID << endl;
+	pinMode(LED, OUTPUT);
 
-  pinMode(LED, OUTPUT);
+	Serial << F("Network. startup complete with node number=") << this->myNodeID << endl;
 }
 
 byte Network::whoAmI() {
@@ -44,7 +44,7 @@ boolean Network::update() {
 		if( radio.DATALEN==sizeof(Message) ) {
 			// read it
 			this->msg = *(Message*)radio.DATA;  
-      this->lastRxNodeID = radio.SENDERID;
+			this->lastRxNodeID = radio.SENDERID;
 			return( true );
 		} else {
 			// and we might be asked to reprogram ourselves by Gateway
@@ -65,7 +65,7 @@ boolean Network::update() {
 }
 
 void Network::printMessage() {
-	Serial << F("Network. msg");
+	Serial << F("Network. MSG:");
 	Serial << F("\td 0=") << msg.d[0] << F(" 1=") << msg.d[1] << F(" 2=") << msg.d[2];
 	Serial << F("\ti 0=") << msg.inter[0] << F(" 1=") << msg.inter[1] << F(" 2=") << msg.inter[2];
 	Serial << F("\tr 0=") << msg.range[0] << F(" 1=") << msg.range[1] << F(" 2=") << msg.range[2];
@@ -87,6 +87,10 @@ boolean Network::meNext() {
 
 void Network::send() {
 	radio.send(BROADCAST, (const void*)(&msg), sizeof(Message));
+}
+
+byte Network::distance() {
+  return( this->msg.d[this->myNodeID-20] );
 }
 
 byte Network::range() {

@@ -12,9 +12,6 @@
 
 #include "Location.h"
 
-// index accessor
-#define MY_I   N.whoAmI()-10
-
 void setup() {
   // need to very quickly prevent calibration on the range sensor, as we don't want them calibrating at the same time (interference)
   digitalWrite(RANGE_PIN, LOW);
@@ -25,8 +22,12 @@ void setup() {
   // start the radio
   N.begin();
 
+  // wait enough time to get a reprogram signal
+  Metro startupDelay(1000UL);
+  while(! startupDelay.check()) N.update();
+
   // start the range finder
-  L.begin();
+  L.begin(N.whoAmI());
 }
 
 void loop()
@@ -37,13 +38,16 @@ void loop()
   // do I need to update the position information?
   if ( N.meNext() ) {
     // update distance
-    N.msg.d[MY_I] = L.readDistance();
+    L.readDistance( N.msg );
 
     // calculate positions
     L.calculatePosition( N.msg );
 
     // send
     N.send();
+
+    // show
+    N.printMessage();
   }
 }
 
