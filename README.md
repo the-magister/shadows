@@ -18,14 +18,15 @@ Briefly, the lighting will be addressable APA102s defining the perimeter of a eq
 
 ## Physical Layout
 
-             20
-       12 -------- 11
-         \        /
+             20             20, 21, 22: Node_Lights
+       12 -------- 11     
+         \        /         10, 11, 12: Node_Location
           \      / 
         21 \    / 22
-            \  /
-             10
+            \  /     _o
+             10       |\
+      ______________ / > ___ 
 
 Tens digit:
-    1 = nodes with ultrasound rangefinders (Node_Location)
-    2 = nodes with RGB LED strips (Node_Light)
+* 1 = nodes with ultrasound rangefinders (Node_Location)
+* 2 = nodes with RGB LED strips (Node_Light)
