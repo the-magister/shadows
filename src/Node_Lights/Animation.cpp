@@ -16,9 +16,8 @@ void Animation::begin(byte startPos, byte startIntensity, byte startAnim) {
 
   this->setFPS();
   this->setMasterBrightness();
-
-  this->currentPos = this->targetPos = startPos;
-  this->currentIntensity = this->targetIntensity = startIntensity;
+  this->position = startPos;
+  this->intensity = startIntensity;
 
   this->setAnimation(startAnim);
 
@@ -28,8 +27,9 @@ void Animation::begin(byte startPos, byte startIntensity, byte startAnim) {
 // sets FPS
 void Animation::setFPS(uint16_t framesPerSecond) {
   this->fps = framesPerSecond;
-  this->pushNextFrame.interval(1000UL / framesPerSecond);
-  Serial << F("Animation. FPS= ") << framesPerSecond << F(". show update=") << 1000UL / framesPerSecond << F(" ms.") << endl;
+  this->pushInterval = 1000UL/framesPerSecond - 5; // fudge a little faster
+  this->pushNextFrame.interval(this->pushInterval);
+  Serial << F("Animation. FPS= ") << framesPerSecond << F(". show update=") << this->pushInterval << F(" ms.") << endl;
 }
 
 // sets master brightness
@@ -46,17 +46,17 @@ void Animation::setAnimation(byte animation, boolean clearStrip) {
   if ( clearStrip ) fill_solid(leds, NUM_LEDS, CRGB(0, 0, 0));
 }
 
-void Animation::fadePositionTo(byte pixel) {
-  if ( this->targetPos != pixel ) {
-    Serial << F("Animation. fadePositionTo= ") << pixel << endl;
-    this->targetPos = pixel;
+void Animation::setPosition(byte position) {
+  if ( this->position != position ) {
+    Serial << F("Animation. position= ") << position << endl;
+    this->position = position;
   }
 }
 
-void Animation::fadeIntensityTo(byte intensity) {
-  if ( this->targetIntensity != intensity ) {
-    Serial << F("Animation. fadeIntensityTo= ") << intensity << endl;
-    this->targetIntensity = intensity;
+void Animation::setIntensity(byte intensity) {
+  if ( this->intensity != intensity ) {
+    Serial << F("Animation. intensity= ") << intensity << endl;
+    this->intensity = intensity;
   }
 }
 
@@ -67,6 +67,7 @@ void Animation::update() {
   static boolean nextFrameReady = false;
   if ( ! nextFrameReady ) {
 
+    /*
     // do we need to shift the center of the animation?
     if ( this->currentPos > this->targetPos ) {
       this->currentPos--;
@@ -80,24 +81,19 @@ void Animation::update() {
     } else if ( this->currentIntensity < this->targetIntensity ) {
       this->currentIntensity++;
     }
-
+    */
+    
     switch ( anim ) {
       case A_IDLE:
-        aCylon( 
-          map(this->currentIntensity, 0, 255, 13, 40), 
-          map(this->currentIntensity, 0, 255, 64, 255)
-          );
+        aCylon( map(this->intensity, 0, 255, 64, 255) );
         break;
       case A_OUTPLANE:
-        aCylon( 
-          map(this->currentIntensity, 0, 255, 13, 40), 
-          map(this->currentIntensity, 0, 255, 64, 255)
-          );
+        aCylon( map(this->intensity, 0, 255, 64, 255) );
         break;
       case A_INPLANE:
         aProjection( 
-          this->currentPos,
-          map(this->currentIntensity, 0, 255, 12, 172)
+          this->position,
+          map(this->intensity, 0, 255, NUM_LEDS/2, 10)
           );
          break;
     }
@@ -109,39 +105,84 @@ void Animation::update() {
   if ( pushNextFrame.check() ) {
     FastLED.show(); // push
 
+    static byte pushCount=0;
+    pushCount++;
+
+    if( pushCount==100 ) {
+      pushCount = 0;
+   
+      int repFPS = FastLED.getFPS();
+  
+      if( repFPS > 0 && repFPS > this->fps+1 ) {
+        this->pushInterval++;
+        this->pushNextFrame.interval(this->pushInterval);
+        Serial << F("Animation. fps reported=") << repFPS << F(" pushInterval=") << this->pushInterval << endl;
+      }
+      if( repFPS>0 && repFPS < this->fps-1 ) {
+        this->pushInterval--;
+        this->pushInterval = this->pushInterval < 0 ? 0 : this->pushInterval;
+        this->pushNextFrame.interval(this->pushInterval);
+        Serial << F("Animation. fps reported=") << repFPS << F(" pushInterval=") << this->pushInterval << endl;
+      }
+    }
+    
     nextFrameReady = false; // setup for next frame calculation
     pushNextFrame.reset();  // setup for next frame push
+    
   }
 
 }
 
-void Animation::aCylon(byte bpm, byte bright) {
+void Animation::aCylon(byte bright) {
   // a colored dot sweeping back and forth, with fading trails
 
   // fade everything
-  fadeToBlackBy( leds, NUM_LEDS, bright/10 );
+  fadeToBlackBy( leds, NUM_LEDS, 10 );
 
-  // set the speed the pixel travels base on intensity
-  byte posVal = beatsin8(bpm, 0, NUM_LEDS); // see: lib8tion.h
+  // set the speed the pixel travels 
+  byte posVal = beatsin8(13, 0, NUM_LEDS); // see: lib8tion.h
 
   // cycle through hues, using intensity to set value
   static byte hue = 0;
   leds[posVal] = CHSV(hue++, 255, bright );
 }
 
-void Animation::aProjection(byte pos, byte diffuse) {
+void Animation::aProjection(byte center, byte extent) {
   // a patch of color
 
   // fade everything
-  fadeToBlackBy( leds, NUM_LEDS, 255 );
+//  fadeToBlackBy( leds, NUM_LEDS, 10 );
 
-  // cycle through hues, using intensity to set value
-  static byte hue = 0;
-  leds[pos] = CHSV(hue++, 255, 255);
-
-  // blur based on diffusion
-  blur1d( leds, NUM_LEDS, diffuse );
+  // clear everything
+  fill_solid( leds, NUM_LEDS, CRGB(0,0,0) );
   
+  // cycle through hues
+  static byte hue = 0;
+  hue++;
+
+  // how far are we diffusing?
+  byte right_s = constrain((int)qadd8(center, 1), 0, NUM_LEDS-1);
+  byte right_e = constrain((int)qadd8(right_s, extent), 0, NUM_LEDS-1);
+  byte left_s = constrain((int)qsub8(center, 1), 0, NUM_LEDS-1);
+  byte left_e = constrain((int)qsub8(left_s, extent), 0, NUM_LEDS-1);
+
+  byte brightness = map(constrain(2*extent, 0, NUM_LEDS-1), 0, NUM_LEDS-1, 255, 16); 
+  for( byte i=left_e;i<=right_e;i++) {
+    leds[i] = CHSV(hue, 255, brightness);
+//    leds[i] = CHSV(hue, 255, map(triwave8(map(i,left_e,right_e,0,255)), 0, 255, 0, bright_max) );
+  }
+
+  // and show the extents
+  leds[left_e] = CHSV(0, 0, 32);
+  leds[left_s] = CHSV(0, 0, 128);
+  leds[center] = CHSV(0, 0, 255);
+  leds[right_s] = CHSV(0, 0, 128);
+  leds[right_e] = CHSV(0, 0, 32);
+
+  // blur everything
+//  for( byte i=0; i<extent; i ++ )
+//    blur1d( leds, NUM_LEDS, 128 );
+ 
 }
 
 /*

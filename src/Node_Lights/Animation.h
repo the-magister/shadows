@@ -41,14 +41,14 @@ class Animation {
     // which calls the following functions with their defaults:
     
     // set frames per second
-    void setFPS(uint16_t framesPerSecond=30);
+    void setFPS(uint16_t framesPerSecond=50);
     // set master brightness
     void setMasterBrightness(byte masterBrightness=255);
 
     // animation control
     void setAnimation(byte animation=A_IDLE, boolean clearStrip=true);
-    void fadePositionTo(byte pixel);
-    void fadeIntensityTo(byte intensity);
+    void setPosition(byte position);
+    void setIntensity(byte intensity);
     
     // updates the animation
     void update();
@@ -58,14 +58,14 @@ class Animation {
 
     byte anim;
     
-    byte currentPos, targetPos;
-    byte currentIntensity, targetIntensity;
+    byte position, intensity;
 
     byte fps;
+    int pushInterval;
 
     // animation layer
-    void aCylon(byte bpm, byte bright);
-    void aProjection(byte pos, byte diffuse);
+    void aCylon(byte bright);
+    void aProjection(byte pos, byte extent);
 };
 
 extern Animation A;

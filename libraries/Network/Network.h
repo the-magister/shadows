@@ -29,7 +29,10 @@ typedef struct {
 #define FLASH_ID      0xEF30 // EF30 for windbond 4mbit flash
 
 #define BASE_LEN      72 // length of LED strips
-#define HEIGHT_LEN    63 // height of the sensor over the LEDS
+#define HALF_BASE     36 // halfway along the LED strip
+
+#define HEIGHT_LEN    62.35383 // height of the sensor over the LEDs
+#define HEIGHT_CEN    20.78461 // midpoint of triangle over LEDs
 
 /*
 Physical layout:

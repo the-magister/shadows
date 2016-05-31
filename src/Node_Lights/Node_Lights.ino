@@ -41,22 +41,24 @@ void setup() {
 
   // startup animation
   A.begin();
+
 }
 
 void loop() {
   // update the radio traffic
-  N.update();
+  if( N.update() ) N.printMessage();
 
   // update the FSM
   S.update();
 
   // update the animation
   A.update();
+
 }
 
 void idleUpdate() {
   // drive the intensity back to baseline
-  A.fadeIntensityTo( 0 );
+  A.setIntensity( 0 );
  
   // check for state changes
 
@@ -72,7 +74,7 @@ void idleUpdate() {
 
 void outPlaneUpdate() {
   // drive the heat up or down, depending on distance sensors
-  A.fadeIntensityTo( 255-N.distance() );
+  A.setIntensity( 255-N.distance() );
 
   // check for state changes
 
@@ -95,10 +97,10 @@ void outPlaneUpdate() {
 
 void inPlaneUpdate() {
   // drive shadow location according to intercept
-  A.fadePositionTo(mapXtoPixel( N.intercept() ));
+  A.setPosition(mapXtoPixel( N.intercept() ));
 
   // drive the intensity according to range
-  A.fadeIntensityTo(mapDtoIntensity( N.range() ));
+  A.setIntensity(mapDtoIntensity( N.range() ));
 
   // check for state changes
 
@@ -144,7 +146,7 @@ byte mapDtoIntensity(byte r) {
       map(
         constrain(r, 0, BASE_LEN), // constrain r to be [0, BASE_LEN]
         0, BASE_LEN, // map [0, BASE_LEN]
-        0, 255 // to [0,255]
+        255, 0 // to [255,0]
       )
   );
 }

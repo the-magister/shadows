@@ -16,11 +16,13 @@ class Location {
     void begin(byte myNodeID);
 
     // read distance
-    void readDistance(Message msg);
+    void readDistance(Message &msg);
 
     // calculate positions
-    void calculatePosition(Message msg);
+    void calculatePosition(Message &msg);
     
+    void heavyLift(byte leftRange, byte rightRange, byte acrossRange, byte &rInter, byte &rRange);
+
   private:
     byte rangePin, pwPin;
     byte myIndex;
@@ -29,7 +31,6 @@ class Location {
     float areaFromDistances(float lA, float lB, float lC);
     float yFromArea(float area, float base);
     float xFromHeight(float y, float l);
-
 };
 
 extern Location L;

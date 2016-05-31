@@ -29,6 +29,8 @@ void Network::begin(byte groupID, byte freq, byte powerLevel) {
 	msg.inter[0] = msg.inter[1] = msg.inter[2] = 255;
 	msg.range[0] = msg.range[1] = msg.range[2] = 255;
 	
+	this->lastRxNodeID = 200; // bootstrap to first transceiver
+	
 	pinMode(LED, OUTPUT);
 
 	Serial << F("Network. startup complete with node number=") << this->myNodeID << endl;
@@ -74,11 +76,11 @@ void Network::printMessage() {
 
 byte Network::isNext(byte node, byte maxNode, byte minNode) {
   // skipping modulo arithmetic to minimize instructions
-  return( (node+1) == (maxNode+1) ? minNode : node+1 );
+  return( (node+1) >= (maxNode+1) ? minNode : node+1 );
 }
 
 byte Network::isPrev(byte node, byte maxNode, byte minNode) {
-  return( (node-1) == (minNode-1) ? maxNode : node-1 );
+  return( (node-1) <= (minNode-1) ? maxNode : node-1 );
 }
 
 boolean Network::meNext() {
