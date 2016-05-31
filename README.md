@@ -41,9 +41,9 @@ Each of the edges (20, 21, 22: Node_Lights) translate the broadcast positional i
 3. Install Arduino IDE.
     1. Open Arduino IDE
     2. Setting File->Preferences->Sketchbook Location to the location of installed source.  
-	3. Setting Show Verbose Compilations.
-	4. Restart Arudino IDE.
+    3. Setting Show Verbose Compilations.
+    4. Restart Arudino IDE.
 4. Compile changes to relevant code (Node_Lights, Node_Location).  Note .hex location.
 5. Connect Gateway_Programmer/ Moteuino.  Note COM port.
 6. Open gateway/WirelessProgramming tool.  Set COM port and .hex location from above.
-	1. Set target nodeID (20, 21, 22: Node_Lights; 10, 11, 12: Node_Location), upload.  Repeat to the other two nodes.
+    1. Set target nodeID (20, 21, 22: Node_Lights; 10, 11, 12: Node_Location), upload.  Repeat to the other two nodes.
