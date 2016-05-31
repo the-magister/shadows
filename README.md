@@ -32,7 +32,7 @@ Each of the vertices (10, 11, 12: Node_Location) have ultrasound range-finders. 
 
 To reduce the burden on the edges (20, 21, 22: Node_Lights), the sensors pre-calculate postional information relative to each edge.  For example, Node_Lights 22 is supplied the location of the object relative to itself.
 
-Each of the edges (20, 21, 22: Node_Lights) translate the broadcast positional information to a animation of LEDs on the edges.  
+Each of the edges (20, 21, 22: Node_Lights) translate the broadcasted positional information to a animation of LEDs on the edges.  
 
 ## Installation and Getting Started
 
