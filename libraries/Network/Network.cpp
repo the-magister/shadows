@@ -25,15 +25,25 @@ void Network::begin(byte groupID, byte freq, byte powerLevel) {
 	
 	this->inStartup = true; // bootstrap
 	
-	msg.d[0] = msg.d[1] = msg.d[2] = 255;
-	msg.inter[0] = msg.inter[1] = msg.inter[2] = 255;
-	msg.range[0] = msg.range[1] = msg.range[2] = 255;
+	msg.d[0] = msg.d[1] = msg.d[2] = 25500;
+	msg.inter[0] = msg.inter[1] = msg.inter[2] = 25500;
+	msg.range[0] = msg.range[1] = msg.range[2] = 25500;
 	
 	this->lastRxNodeID = 200; // bootstrap to first transceiver
 	
 	pinMode(LED, OUTPUT);
 
+	Serial << F("Network. bitrate=55555 bits/sec.") << endl;
+	
+	// packet contents: http://lowpowerlab.com/blog/2013/06/20/rfm69-library/
+	byte packetSizebits = 8*(3+2+4+sizeof(Message)+2);
+	
+	Serial << F("Network. packet size=") << packetSizebits << endl;
+	
+	Serial << F("Network. approximate packet transmission time(ms)=") << packetSizebits / 56 + 1 << endl;
+	
 	Serial << F("Network. startup complete with node number=") << this->myNodeID << endl;
+	
 }
 
 byte Network::whoAmI() {
@@ -91,15 +101,15 @@ void Network::send() {
 	radio.send(BROADCAST, (const void*)(&msg), sizeof(Message));
 }
 
-byte Network::distance() {
+word Network::distance() {
   return( this->msg.d[this->myNodeID-20] );
 }
 
-byte Network::range() {
+word Network::range() {
   return( this->msg.range[this->myNodeID-20] );
 }
 
-byte Network::intercept() {
+word Network::intercept() {
   return( this->msg.inter[this->myNodeID-20] );
 }
 

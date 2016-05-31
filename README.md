@@ -22,14 +22,17 @@ Briefly, the lighting will be addressable APA102s defining the perimeter of a eq
        12 -------- 11     
          \        /         10, 11, 12: Node_Location
           \      / 
-        21 \    / 22
-            \  /     _o
+        21 \    / 22         Tens-digit: =2 Light, =1 Location
+            \  /     _o      Ones-digit: matching digits indicate opposed nodes
              10       |\
       ______________ / > ___ 
 
-Tens digit:
-* 1 = nodes with ultrasound rangefinders (Node_Location)
-* 2 = nodes with RGB LED strips (Node_Light)
+
+Each of the vertices (10, 11, 12: Node_Location) have ultrasound range-finders.  These nodes range in a Round-Robin sequence (to prevent interference by each other).  After range finding, each node computes the location of an object in the plane of the triangle, using its latest range information and the previous updates from the other vertices.
+
+To reduce the burden on the edges (20, 21, 22: Node_Lights), the sensors pre-calculate postional information relative to each edge.  For example, Node_Lights 22 is supplied the location of the object relative to itself.
+
+Each of the edges (20, 21, 22: Node_Lights) translate the broadcast positional information to a animation of LEDs on the edges.  
 
 ## Installation and Getting Started
 
@@ -41,6 +44,6 @@ Tens digit:
 	3. Setting Show Verbose Compilations.
 	4. Restart Arudino IDE.
 4. Compile changes to relevant code (Node_Lights, Node_Location).  Note .hex location.
-5. Connect Gateway_Programmer/ Moteuino.  Node COM port.
+5. Connect Gateway_Programmer/ Moteuino.  Note COM port.
 6. Open gateway/WirelessProgramming tool.  Set COM port and .hex location from above.
-7. Set target nodeID (20, 21, 22: Node_Lights; 10, 11, 12: Node_Location), upload.  Repeat to the other two nodes.
+	1. Set target nodeID (20, 21, 22: Node_Lights; 10, 11, 12: Node_Location), upload.  Repeat to the other two nodes.

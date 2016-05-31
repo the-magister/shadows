@@ -19,20 +19,20 @@
 #define POWERLEVEL 31 // 0-31, 31 being maximal
 
 typedef struct {
-  byte d[3];  // distance relative to sensors; pull by d[this->myNodeID-10]
-  byte inter[3];  // projected intersection on lights; pull by x[this->myNodeID-20]
-  byte range[3];  // projected distnace lights; pull by y[this->myNodeID-20]
+  word d[3];      // distance relative to sensors; pull by d[this->myNodeID-10]
+  word inter[3];  // projected intersection on lights; pull by x[this->myNodeID-20]
+  word range[3];  // projected distnace lights; pull by y[this->myNodeID-20]
 } Message;
 
 #define LED           9 // Moteinos have LED on D9
 #define FLASH_SS      8 // and FLASH SS on D8
 #define FLASH_ID      0xEF30 // EF30 for windbond 4mbit flash
 
-#define BASE_LEN      72 // length of LED strips
-#define HALF_BASE     36 // halfway along the LED strip
+#define BASE_LEN      7200.000 // length of LED strips (centainches)
+#define HALF_BASE     3600.000 // halfway along the LED strip (centainches)
 
-#define HEIGHT_LEN    62.35383 // height of the sensor over the LEDs
-#define HEIGHT_CEN    20.78461 // midpoint of triangle over LEDs
+#define HEIGHT_LEN    6235.383 // height of the sensor over the LEDs (centainches)
+#define HEIGHT_CEN    2078.461 // midpoint of triangle over LEDs (centainches)
 
 /*
 Physical layout:
@@ -89,9 +89,9 @@ class Network {
     // is there an object in the plane?
     boolean objectInPlane();
     // return the positional information, relative to me
-	byte distance();
-    byte intercept();
-    byte range();
+	word distance();
+    word intercept();
+    word range();
     
   private:
     boolean inStartup;
