@@ -30,3 +30,17 @@ Briefly, the lighting will be addressable APA102s defining the perimeter of a eq
 Tens digit:
 * 1 = nodes with ultrasound rangefinders (Node_Location)
 * 2 = nodes with RGB LED strips (Node_Light)
+
+## Installation and Getting Started
+
+1. Install github tools.
+2. Download source.
+3. Install Arduino IDE.
+    1. Open Arduino IDE
+    2. Setting File->Preferences->Sketchbook Location to the location of installed source.  
+	3. Setting Show Verbose Compilations.
+	4. Restart Arudino IDE.
+4. Compile changes to relevant code (Node_Lights, Node_Location).  Note .hex location.
+5. Connect Gateway_Programmer/ Moteuino.  Node COM port.
+6. Open gateway/WirelessProgramming tool.  Set COM port and .hex location from above.
+7. Set target nodeID (20, 21, 22: Node_Lights; 10, 11, 12: Node_Location), upload.  Repeat to the other two nodes.
