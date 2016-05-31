@@ -15,11 +15,10 @@
 #define SPOOF_LOCATION 0
 #define SPOOF_CIRCLE 1
 
-void setup() {
-  // need to very quickly prevent calibration on the range sensor, as we don't want them calibrating at the same time (interference)
-  digitalWrite(RANGE_PIN, LOW);
-  pinMode(RANGE_PIN, OUTPUT);
+#define CALIBRATION_INTERVAL 60000UL // calibrate every minute if there's nothing going on
+const word noRange = round(37500.0 * 100.0 / 147.0);
 
+void setup() {
   Serial.begin(115200);
 
   // start the radio
@@ -41,6 +40,13 @@ void loop()
 
   // do I need to update the position information?
   if ( N.meNext() ) {
+    
+    // if it's good to recalibrate (nothing sensed), do so.
+    static Metro calibrationInterval(CALIBRATION_INTERVAL);
+    if( calibrationInterval.check() && N.msg.d[0]==noRange && N.msg.d[1]==noRange && N.msg.d[2]==noRange ) {
+      L.calibrateDistance();
+    }
+    
     // update distance
     if( ! SPOOF_LOCATION && ! SPOOF_CIRCLE )
       L.readDistance( N.msg );
@@ -75,22 +81,22 @@ void spoofLocation(Message &msg) {
 
   Serial << F("Spoof location.  x=") << x << F(" y=") << y << endl;
 
-  msg.d[0] = round(pow( pow((float)x, 2.0) + pow((float)y, 2.0) , 0.5));
-  msg.d[2] = round(pow( pow((float)BASE_LEN - x, 2.0) + pow((float)y, 2.0) , 0.5));
-  msg.d[1] = round(pow( pow((float)BASE_LEN / 2.0 - x, 2.0) + pow((float)HEIGHT_LEN - y, 2.0) , 0.5));
+  msg.d[0] = round(pow( pow(x, 2.0) + pow(y, 2.0) , 0.5));
+  msg.d[2] = round(pow( pow(BASE_LEN - x, 2.0) + pow(y, 2.0) , 0.5));
+  msg.d[1] = round(pow( pow(BASE_LEN / 2.0 - x, 2.0) + pow(HEIGHT_LEN - y, 2.0) , 0.5));
 
   N.printMessage();
   
   Serial << F("Spoof circle. backcheck:");
-  byte range, inter;
+  word range, inter;
   L.heavyLift(msg.d[0], msg.d[2], msg.d[1], inter, range);
 
 }
 
 void spoofCircle(Message & msg) {
   const float r = HEIGHT_CEN-1.0;
-  const float x0 = (float)HALF_BASE;
-  const float y0 = (float)HEIGHT_CEN;
+  const float x0 = HALF_BASE;
+  const float y0 = HEIGHT_CEN;
 
   Serial << F("Spoof circle. r=") << r << F(" x0=") << x0 << F(" y0=") << y0 << endl;
 
@@ -101,14 +107,14 @@ void spoofCircle(Message & msg) {
   
   Serial << F("Spoof circle. where=") << where << F(" x=") << x << F(" y=") << y << endl;
 
-  msg.d[0] = round(pow( pow((float)x, 2.0) + pow((float)y, 2.0) , 0.5));
-  msg.d[2] = round(pow( pow((float)BASE_LEN - x, 2.0) + pow((float)y, 2.0) , 0.5));
-  msg.d[1] = round(pow( pow((float)BASE_LEN / 2.0 - x, 2.0) + pow((float)HEIGHT_LEN - y, 2.0) , 0.5));
+  msg.d[0] = round(pow( pow(x, 2.0) + pow(y, 2.0) , 0.5));
+  msg.d[2] = round(pow( pow(BASE_LEN - x, 2.0) + pow(y, 2.0) , 0.5));
+  msg.d[1] = round(pow( pow(BASE_LEN / 2.0 - x, 2.0) + pow(HEIGHT_LEN - y, 2.0) , 0.5));
 
   N.printMessage();
 
   Serial << F("Spoof circle. backcheck:");
-  byte range, inter;
+  word range, inter;
   L.heavyLift(msg.d[0], msg.d[2], msg.d[1], inter, range);
 
 }

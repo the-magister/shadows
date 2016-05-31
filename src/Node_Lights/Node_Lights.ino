@@ -121,7 +121,7 @@ X:         0                             BASE_LEN
 Pixel:     0                           NUM_LEDS-1 
 
  */
-byte mapXtoPixel(int x) {
+byte mapXtoPixel(word x) {
   // map with constraint
   return(
     map(
@@ -140,7 +140,7 @@ distance: 0            [HEIGHT_LEN, BASE_LEN]
 range:    [HEIGHT_LEN, BASE_LEN]           0              
                 
  */
-byte mapDtoIntensity(byte r) {
+byte mapDtoIntensity(word r) {
   // map with constraint
   return(
       map(

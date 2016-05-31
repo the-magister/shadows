@@ -7,13 +7,17 @@
 
 #include <Network.h>
 
-#define RANGE_PIN 6
-#define PW_PIN 7
+#define POWER_PIN 5 // wire to MaxSonar +5V (pin 6)
+#define RANGE_PIN 6 // wire to MaxSonar RX (pin 4)
+#define PW_PIN 7    // wire to MaxSonar PW (pin 2)
 
 class Location {
   public:
     // initialize location
     void begin(byte myNodeID);
+
+    // calibrate sensor;  should be done periodically to adjust for changing temperature and humidity
+    void calibrateDistance();
 
     // read distance
     void readDistance(Message &msg);
@@ -21,10 +25,9 @@ class Location {
     // calculate positions
     void calculatePosition(Message &msg);
     
-    void heavyLift(byte leftRange, byte rightRange, byte acrossRange, byte &rInter, byte &rRange);
+    void heavyLift(word leftRange, word rightRange, word acrossRange, word &rInter, word &rRange);
 
   private:
-    byte rangePin, pwPin;
     byte myIndex;
     boolean calibrated;
     
