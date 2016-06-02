@@ -7,9 +7,10 @@
 
 #include <Network.h>
 
-#define POWER_PIN 5 // wire to MaxSonar +5V (pin 6)
-#define RANGE_PIN 6 // wire to MaxSonar RX (pin 4)
-#define PW_PIN 7    // wire to MaxSonar PW (pin 2)
+#define PIN_GND 2   // DC return
+#define PIN_VCC 3   // Vcc in range 3-5.5VDC
+#define PIN_RX  5   // hold high/open for ranging. hold low to stop ranging.
+#define PIN_PW  7   // pulse width representation with scale factor of 140 uS per inch
 
 class Location {
   public:

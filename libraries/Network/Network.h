@@ -64,8 +64,8 @@ Ultrasound ring goes counter-clockwise round-robin:
 
 class Network {
   public:
-    // initialize led strips
-    void begin(byte groupID=GROUPID, byte freq=RF69_915MHZ, byte powerLevel=POWERLEVEL);
+    // initialize radio
+    void begin(byte nodeID=255, byte groupID=GROUPID, byte freq=RF69_915MHZ, byte powerLevel=POWERLEVEL);
     // return my node ID
     byte whoAmI();
 
@@ -80,7 +80,7 @@ class Network {
     // for Node_Location
     // am I next to transmit distance information?
     boolean meNext();
-   // send location information
+    // send location information encoded in msg
     void send();
 
     // for Node_Lights

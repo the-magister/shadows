@@ -3,14 +3,11 @@
 void Location::begin(byte myNodeID) {
   Serial << F("Location. startup with nodeID=") << myNodeID << endl;
 
-  pinMode(PW_PIN, INPUT);
- 
-  digitalWrite(RANGE_PIN, LOW);
-  pinMode(RANGE_PIN, OUTPUT);
-  
-  digitalWrite(POWER_PIN, LOW);
-  pinMode(POWER_PIN, OUTPUT);
-  
+  digitalWrite(PIN_GND, LOW); pinMode(PIN_GND, OUTPUT);
+  pinMode(PIN_PW, INPUT);
+  digitalWrite(PIN_RX, LOW); pinMode(PIN_RX, OUTPUT);
+  digitalWrite(PIN_VCC, HIGH); pinMode(PIN_VCC, OUTPUT);
+
   // index accessor
   this->myIndex = N.whoAmI() - 10;
   Serial << F("Location.  storing distance information in messsage index=") << this->myIndex << endl;
@@ -24,39 +21,57 @@ void Location::readDistance(Message &msg) {
     this->calibrateDistance();
   }
 
-  digitalWrite(RANGE_PIN, HIGH); // range
-  unsigned long pulseTime = pulseIn(PW_PIN, HIGH, 37500UL);
-  digitalWrite(RANGE_PIN, LOW); // stop ranging
-
+  Serial << F("Location. ranging");
+  unsigned long pulseTime = 0;
+  while( pulseTime == 0UL ) {
+    Serial << F(".");
+    digitalWrite(PIN_RX, HIGH); // range
+    pulseTime = pulseIn(PIN_PW, HIGH); 
+    digitalWrite(PIN_RX, LOW); // stop ranging
+  }
+  Serial << endl;
+  
+  // sanity checks
+  if( pulseTime == 0UL ) {
+    Serial << F("Location. no reading from sensor.") << endl;
+    pulseTime = 37500UL;
+  }
+  if( pulseTime > 37500UL ) {
+    Serial << F("Location. out-of-range reading from sensor.") << endl;
+    pulseTime = 37500UL;
+  }
+  
   // convert the number of us to decainches.  e.g. 1200 decainches is 12 inches.
   float decaInches = ( pulseTime * 100.0 ) / 147.0; // max 25510.
 
-  Serial << F("Location. range=") << decaInches << endl;
+  Serial << F("Location. pulseTime (uS)=") << pulseTime << F(" range (decainches)=") << decaInches << F(" range (ft)=") << decaInches/1200.00 << endl;
   msg.d[this->myIndex] = round(decaInches);
 }
 
 void Location::calibrateDistance() {
+  Serial << F("Location.  calibrating range finder...") << endl;
+
   // depower the MaxSonar
-  digitalWrite(POWER_PIN, LOW);
-  // set the range pin to low
-  digitalWrite(RANGE_PIN, LOW);
+  digitalWrite(PIN_VCC, LOW);
+  // set the range pin to high
+  digitalWrite(PIN_RX, HIGH);
 
   // wait for depower
-  delay(50);
+  delay(100);
 
-  // set the range pin to high
-  digitalWrite(RANGE_PIN, HIGH); 
   // power the MaxSonar
-  digitalWrite(POWER_PIN, HIGH);
+  digitalWrite(PIN_VCC, HIGH);
 
   // wait for calibration; should take about 250 ms
-  delay(350);
+  delay(200);
 
-  // turn off the range pin
-  digitalWrite(RANGE_PIN, LOW);
+  // set the range pin to low
+  digitalWrite(PIN_RX, LOW);  
 
   // wait for another cycle, since we'll likely take a reading immediately hereafter
   delay(50);
+
+  Serial << F("Location.  calibrated range finder.") << endl;
   
   this->calibrated = true;
 }

@@ -2,20 +2,25 @@
 
 SPIFlash flash(FLASH_SS, FLASH_ID); 
 
-void Network::begin(byte groupID, byte freq, byte powerLevel) {
+void Network::begin(byte nodeID, byte groupID, byte freq, byte powerLevel) {
 	Serial << F("Network. startup.") << endl;
 
 	// EEPROM location for radio settings.
 	const byte radioConfigLocation = 42;
-	this->myNodeID = EEPROM.read(radioConfigLocation);
-	Serial << F("Network. read nodeID from EEPROM=") << this->myNodeID << endl;
-
-	if( this->myNodeID > 25 ) {
+	if( nodeID == 255 ) {
+		this->myNodeID = EEPROM.read(radioConfigLocation);
+		Serial << F("Network. read nodeID from EEPROM=") << this->myNodeID << endl;
+	} else {
+		Serial << F("Network.  writing nodeID to EEPROM=") << nodeID << endl;
+		EEPROM.write(radioConfigLocation, nodeID);
+		this->myNodeID = nodeID;
+	}
+	if( this->myNodeID > 200 ) {
 		Serial << F("Network. ERROR no nodeID found in EEPROM!") << endl;
 		Serial << F("Enter the node number for this node:") << endl;
 		while( ! Serial.available() );
 		EEPROM.write(radioConfigLocation, Serial.parseInt());
-		return( this->begin(groupID, freq, powerLevel) );
+		return( this->begin(nodeID, groupID, freq, powerLevel) );
 	}
 
 	radio.initialize(freq, this->myNodeID, groupID);
@@ -23,22 +28,21 @@ void Network::begin(byte groupID, byte freq, byte powerLevel) {
 	radio.promiscuous(true); // so broadcasts are received
 	radio.setPowerLevel(powerLevel);
 	
-	this->inStartup = true; // bootstrap
-	
 	msg.d[0] = msg.d[1] = msg.d[2] = 25500;
 	msg.inter[0] = msg.inter[1] = msg.inter[2] = 25500;
 	msg.range[0] = msg.range[1] = msg.range[2] = 25500;
 	
-	this->lastRxNodeID = 200; // bootstrap to first transceiver
+	this->lastRxNodeID = 12; // bootstrap to first transceiver
 	
 	pinMode(LED, OUTPUT);
+	digitalWrite(LED, LOW);
 
-	Serial << F("Network. bitrate=55555 bits/sec.") << endl;
+	Serial << F("Network. bitrate(bits/s)=55555.") << endl;
 	
 	// packet contents: http://lowpowerlab.com/blog/2013/06/20/rfm69-library/
 	byte packetSizebits = 8*(3+2+4+sizeof(Message)+2);
 	
-	Serial << F("Network. packet size=") << packetSizebits << endl;
+	Serial << F("Network. packet size(bits)=") << packetSizebits << F(" (bytes)=") << packetSizebits/8 << endl;
 	
 	Serial << F("Network. approximate packet transmission time(ms)=") << packetSizebits / 56 + 1 << endl;
 	
@@ -53,10 +57,12 @@ byte Network::whoAmI() {
 boolean Network::update() {
 	// new traffic?
 	if( radio.receiveDone() ) {   
+		Serial << F("Network. radio RX") << endl;
 		if( radio.DATALEN==sizeof(Message) ) {
 			// read it
 			this->msg = *(Message*)radio.DATA;  
 			this->lastRxNodeID = radio.SENDERID;
+			Serial << F("Network. message RX") << endl;
 			return( true );
 		} else {
 			// and we might be asked to reprogram ourselves by Gateway
@@ -64,20 +70,11 @@ boolean Network::update() {
 		}
 	}
 
-	// are we trying to bootstrap?
-	if( this->inStartup ) {
-		// set the last nodeID received to be outside of the range.
-		// the first transmitter will then be the next to transmit.
-		this->inStartup = false;
-		this->lastRxNodeID = 200;
-		return( true );
-	}
-	
 	return( false );
 }
 
 void Network::printMessage() {
-	Serial << F("Network. MSG:");
+	Serial << F("Network. MSG from ") << this->lastRxNodeID;
 	Serial << F("\td 0=") << msg.d[0] << F(" 1=") << msg.d[1] << F(" 2=") << msg.d[2];
 	Serial << F("\ti 0=") << msg.inter[0] << F(" 1=") << msg.inter[1] << F(" 2=") << msg.inter[2];
 	Serial << F("\tr 0=") << msg.range[0] << F(" 1=") << msg.range[1] << F(" 2=") << msg.range[2];
@@ -98,7 +95,9 @@ boolean Network::meNext() {
 }
 
 void Network::send() {
-	radio.send(BROADCAST, (const void*)(&msg), sizeof(Message));
+	Serial << F("Network. send.") << endl;
+	radio.send(BROADCAST, (const void*)(&this->msg), sizeof(Message));
+	this->lastRxNodeID = this->myNodeID;
 }
 
 word Network::distance() {
@@ -114,7 +113,7 @@ word Network::intercept() {
 }
 
 boolean Network::objectAnywhere() {
-  return( msg.d[0] < 254 || msg.d[1] < 254 || msg.d[2] < 254 );
+  return( msg.d[0] < 25400 || msg.d[1] < 25400 || msg.d[2] < 25400 );
 }
 
 boolean Network::objectInPlane() {

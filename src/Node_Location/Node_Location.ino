@@ -13,7 +13,7 @@
 #include "Location.h"
 
 #define SPOOF_LOCATION 0
-#define SPOOF_CIRCLE 1
+#define SPOOF_CIRCLE 0
 
 #define CALIBRATION_INTERVAL 60000UL // calibrate every minute if there's nothing going on
 const word noRange = round(37500.0 * 100.0 / 147.0);
@@ -35,11 +35,17 @@ void setup() {
 
 void loop()
 {
+  static Metro heartBeat(1000UL);
+  if( heartBeat.check() ) { Serial << F("."); }
+  
   // update the radio traffic
-  N.update();
-
+  if( N.update() ) {
+     Serial << F("RX: "); N.printMessage();
+  }
+  
   // do I need to update the position information?
   if ( N.meNext() ) {
+    digitalWrite(LED, HIGH);
     
     // if it's good to recalibrate (nothing sensed), do so.
     static Metro calibrationInterval(CALIBRATION_INTERVAL);
@@ -65,8 +71,9 @@ void loop()
     N.send();
 
     // show
-    N.printMessage();
+    Serial << F("TX: "); N.printMessage();
 
+    digitalWrite(LED, LOW);
   }
 }
 
