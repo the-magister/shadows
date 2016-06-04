@@ -24,15 +24,25 @@ typedef struct {
   word range[3];  // projected distnace lights; pull by y[this->myNodeID-20]
 } Message;
 
+// pin definitions common to Moteuinos
 #define LED           9 // Moteinos have LED on D9
 #define FLASH_SS      8 // and FLASH SS on D8
 #define FLASH_ID      0xEF30 // EF30 for windbond 4mbit flash
 
+// geometry of the devices
 #define BASE_LEN      7200.000 // length of LED strips (centainches)
 #define HALF_BASE     3600.000 // halfway along the LED strip (centainches)
 
 #define HEIGHT_LEN    6235.383 // height of the sensor over the LEDs (centainches)
 #define HEIGHT_CEN    2078.461 // midpoint of triangle over LEDs (centainches)
+
+// range definitions
+#define D_OFFLINE     65535  // one or more sensors haven't reported in
+#define D_ERROR       65534  // distance information is in error
+
+// position definition
+#define P_OFFLINE     65535  // one or more sensors haven't reported in
+#define P_ERROR       65534  // distance information can't be used to triangulate location
 
 /*
 Physical layout:
@@ -80,6 +90,8 @@ class Network {
     // for Node_Location
     // am I next to transmit distance information?
     boolean meNext();
+	// was I the last to transmit distance information?
+	boolean meLast();
     // send location information encoded in msg
     void send();
 

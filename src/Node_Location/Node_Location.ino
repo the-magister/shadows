@@ -18,6 +18,8 @@
 #define CALIBRATION_INTERVAL 60000UL // calibrate every minute if there's nothing going on
 const word noRange = round(37500.0 * 100.0 / 147.0);
 
+#define RESEND_INTERVAL 100UL
+
 void setup() {
   Serial.begin(115200);
 
@@ -36,25 +38,29 @@ void setup() {
 void loop()
 {
   static Metro heartBeat(1000UL);
-  if( heartBeat.check() ) { Serial << F("."); }
-  
-  // update the radio traffic
-  if( N.update() ) {
-     Serial << F("RX: "); N.printMessage();
+  if ( heartBeat.check() ) {
+    Serial << F(".");
   }
-  
+
+  // update the radio traffic
+  static Metro resendInterval(RESEND_INTERVAL);
+  if ( N.update() ) {
+    Serial << F("RX: "); N.printMessage();
+    resendInterval.reset();
+  }
+
   // do I need to update the position information?
   if ( N.meNext() ) {
     digitalWrite(LED, HIGH);
-    
+
     // if it's good to recalibrate (nothing sensed), do so.
     static Metro calibrationInterval(CALIBRATION_INTERVAL);
-    if( calibrationInterval.check() && N.msg.d[0]==noRange && N.msg.d[1]==noRange && N.msg.d[2]==noRange ) {
+    if ( calibrationInterval.check() && N.msg.d[0] == noRange && N.msg.d[1] == noRange && N.msg.d[2] == noRange ) {
       L.calibrateDistance();
     }
-    
+
     // update distance
-    if( ! SPOOF_LOCATION && ! SPOOF_CIRCLE )
+    if ( ! SPOOF_LOCATION && ! SPOOF_CIRCLE )
       L.readDistance( N.msg );
 
     if ( SPOOF_LOCATION ) {
@@ -75,6 +81,15 @@ void loop()
 
     digitalWrite(LED, LOW);
   }
+
+  // do I need to resend position information?
+  if( N.meLast() && resendInterval.check() ) {
+    digitalWrite(LED, HIGH);
+    N.send();
+    // show
+    Serial << F("RESEND: "); N.printMessage();
+    digitalWrite(LED, LOW);
+  }
 }
 
 void spoofLocation(Message &msg) {
@@ -93,7 +108,7 @@ void spoofLocation(Message &msg) {
   msg.d[1] = round(pow( pow(BASE_LEN / 2.0 - x, 2.0) + pow(HEIGHT_LEN - y, 2.0) , 0.5));
 
   N.printMessage();
-  
+
   Serial << F("Spoof circle. backcheck:");
   word range, inter;
   L.heavyLift(msg.d[0], msg.d[2], msg.d[1], inter, range);
@@ -101,7 +116,7 @@ void spoofLocation(Message &msg) {
 }
 
 void spoofCircle(Message & msg) {
-  const float r = HEIGHT_CEN-1.0;
+  const float r = HEIGHT_CEN - 1.0;
   const float x0 = HALF_BASE;
   const float y0 = HEIGHT_CEN;
 
@@ -109,9 +124,9 @@ void spoofCircle(Message & msg) {
 
   float where = (float)(millis() % 10000UL) / 10000.0 * 2.0 * PI;
 
-  float x = x0 + r*cos(where);
-  float y = y0 + r*sin(where);
-  
+  float x = x0 + r * cos(where);
+  float y = y0 + r * sin(where);
+
   Serial << F("Spoof circle. where=") << where << F(" x=") << x << F(" y=") << y << endl;
 
   msg.d[0] = round(pow( pow(x, 2.0) + pow(y, 2.0) , 0.5));

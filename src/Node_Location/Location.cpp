@@ -24,28 +24,31 @@ void Location::readDistance(Message &msg) {
   Serial << F("Location. ranging");
   unsigned long pulseTime = 0;
   while( pulseTime == 0UL ) {
-    Serial << F(".");
+    Serial << F("r ");
     digitalWrite(PIN_RX, HIGH); // range
     pulseTime = pulseIn(PIN_PW, HIGH); 
     digitalWrite(PIN_RX, LOW); // stop ranging
   }
   Serial << endl;
+
+  // convert to distance in decainches; 1 inch = 100 decainches
+  unsigned long decaInches; // promoted to 32-bit to handle *100 step later on
   
   // sanity checks
   if( pulseTime == 0UL ) {
     Serial << F("Location. no reading from sensor.") << endl;
-    pulseTime = 37500UL;
+    decaInches = D_ERROR;
   }
-  if( pulseTime > 37500UL ) {
+  else if( pulseTime > 37500UL ) {
     Serial << F("Location. out-of-range reading from sensor.") << endl;
-    pulseTime = 37500UL;
-  }
-  
-  // convert the number of us to decainches.  e.g. 1200 decainches is 12 inches.
-  float decaInches = ( pulseTime * 100.0 ) / 147.0; // max 25510.
+    decaInches = D_ERROR;
+  } else {
+    // convert the number of us to decainches.  e.g. 1200 decainches is 12 inches.
+    decaInches = ( pulseTime * 100 ) / 147; // max 25510.  
+  }  
 
-  Serial << F("Location. pulseTime (uS)=") << pulseTime << F(" range (decainches)=") << decaInches << F(" range (ft)=") << decaInches/1200.00 << endl;
-  msg.d[this->myIndex] = round(decaInches);
+  Serial << F("Location. pulseTime (uS)=") << pulseTime << F(" range (decainches)=") << decaInches << F(" range (ft)=") << decaInches/1200 << endl;
+  msg.d[this->myIndex] = decaInches;
 }
 
 void Location::calibrateDistance() {
@@ -77,7 +80,15 @@ void Location::calibrateDistance() {
 }
 
 void Location::calculatePosition(Message &msg) {
-
+ 
+  // if any of the distance information is outside of the triangle, no need to calculate
+  if( msg.d[0] > BASE_LEN || msg.d[1] > BASE_LEN || msg.d[2] > BASE_LEN ) {
+    Serial << F("Location. out-of-range.") << endl;
+    msg.inter[0] = msg.inter[1] = msg.inter[2] = P_ERROR;
+    msg.range[0] = msg.range[1] = msg.range[2] = P_ERROR;
+    return;
+  }
+  
   Serial << F("Location. calculatePosition A20: ");
   heavyLift(msg.d[2], msg.d[1], msg.d[0], msg.inter[0], msg.range[0]);
 
@@ -119,6 +130,7 @@ void Location::heavyLift(word leftRange, word rightRange, word acrossRange, word
   // get the area of the triangle by Heron's
   A = areaFromDistances(leftD, rightD, BL);
   Serial << F(" A=") << A;
+  
 
   // determine the height of the triangle, given area and base
   y = yFromArea(A, BL);
@@ -144,9 +156,9 @@ void Location::heavyLift(word leftRange, word rightRange, word acrossRange, word
 
   Serial << endl;
 
-  if ( range > BASE_LEN ) {
-    Serial << F("ERROR!  Range>BL") << endl;
-    while (1);
+  if ( rInter == 0 || rInter > BASE_LEN || rRange == 0 || rRange > BASE_LEN) {
+    rInter = P_ERROR;
+    rRange = P_ERROR;
   }
 
 }

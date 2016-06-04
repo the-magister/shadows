@@ -28,9 +28,9 @@ void Network::begin(byte nodeID, byte groupID, byte freq, byte powerLevel) {
 	radio.promiscuous(true); // so broadcasts are received
 	radio.setPowerLevel(powerLevel);
 	
-	msg.d[0] = msg.d[1] = msg.d[2] = 25500;
-	msg.inter[0] = msg.inter[1] = msg.inter[2] = 25500;
-	msg.range[0] = msg.range[1] = msg.range[2] = 25500;
+	msg.d[0] = msg.d[1] = msg.d[2] = D_OFFLINE;
+	msg.inter[0] = msg.inter[1] = msg.inter[2] = P_OFFLINE;
+	msg.range[0] = msg.range[1] = msg.range[2] = P_OFFLINE;
 	
 	this->lastRxNodeID = 12; // bootstrap to first transceiver
 	
@@ -92,6 +92,10 @@ byte Network::isPrev(byte node, byte maxNode, byte minNode) {
 
 boolean Network::meNext() {
   return( isNext(this->lastRxNodeID, 12, 10) == this->myNodeID );
+}
+
+boolean Network::meLast() {
+  return( this->lastRxNodeID == this->myNodeID );
 }
 
 void Network::send() {
