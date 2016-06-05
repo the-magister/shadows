@@ -26,12 +26,6 @@ void setup() {
 
   Serial.begin(115200);
 
-  Serial << F("main.  location calibrations: ");
-  Serial << F("\tX=") << 0 << F(" -> P=") << mapXtoPixel(0);
-  Serial << F("\tX=") << BASE_LEN/2 << F(" -> P=") << mapXtoPixel(BASE_LEN/2);
-  Serial << F("\tX=") << BASE_LEN << F(" -> P=") << mapXtoPixel(BASE_LEN);
-  Serial << endl;
-  
   // start the radio
   N.begin();
 
@@ -58,7 +52,7 @@ void loop() {
 
 void idleUpdate() {
   // drive the intensity back to baseline
-  A.setIntensity( 0 );
+  A.setIntensity( 64 );
  
   // check for state changes
 
@@ -73,8 +67,14 @@ void idleUpdate() {
 
 
 void outPlaneUpdate() {
-  // drive the heat up or down, depending on distance sensors
-  A.setIntensity( 255-N.distance() );
+  // drive the brightness up or down, depending on distance sensors
+  A.setIntensity( 
+    map(
+      constrain(N.distance(), P_EDGE_RANGE, P_EDGE_RANGE-P_EDGE_TRI), 
+      P_EDGE_RANGE, P_EDGE_RANGE-P_EDGE_TRI, // [edge of detectable range, edge of triangle]
+      64, 255 // [dim, bright]
+    )
+  );
 
   // check for state changes
 
@@ -97,10 +97,22 @@ void outPlaneUpdate() {
 
 void inPlaneUpdate() {
   // drive shadow location according to intercept
-  A.setPosition(mapXtoPixel( N.intercept() ));
+  A.setPosition(
+    map(
+      constrain(N.intercept(), 0, BASE_LEN),  // constrain x to be [0, BASE_LEN]
+      0, BASE_LEN, // map [0, BASE_LEN]
+      0, NUM_LEDS-1 // to [0, NUM_LEDS-1]
+    )
+  );
 
   // drive the intensity according to range
-  A.setIntensity(mapDtoIntensity( N.range() ));
+  A.setIntensity(
+    map(
+      constrain(N.range(), 0, BASE_LEN),
+      0, BASE_LEN, // map [0, BASE_LEN]
+      0, NUM_LEDS-1 // to [0, NUM_LEDS-1]
+    )
+  );
 
   // check for state changes
 
@@ -112,43 +124,4 @@ void inPlaneUpdate() {
     A.setAnimation( A_OUTPLANE );
   }
 }
-
-// helper function to map location to pixels
-/* Diagram of the pixel location as a function of the object location
-
-Location:  left edge ----------------- right edge
-X:         0                             BASE_LEN
-Pixel:     0                           NUM_LEDS-1 
-
- */
-byte mapXtoPixel(word x) {
-  // map with constraint
-  return(
-    map(
-      constrain(x, 0, BASE_LEN),  // constrain x to be [0, BASE_LEN]
-      0, BASE_LEN, // map [0, BASE_LEN]
-      0, NUM_LEDS-1 // to [0, NUM_LEDS-1]
-    )
-  );
-}
-
-// helper function to map distance to spark intensity
-/*  Diagram of the intensity as a function of distance to plane:
-
-Location: Sensor ---------------> Plane Edge
-distance: 0            [HEIGHT_LEN, BASE_LEN]
-range:    [HEIGHT_LEN, BASE_LEN]           0              
-                
- */
-byte mapDtoIntensity(word r) {
-  // map with constraint
-  return(
-      map(
-        constrain(r, 0, BASE_LEN), // constrain r to be [0, BASE_LEN]
-        0, BASE_LEN, // map [0, BASE_LEN]
-        255, 0 // to [255,0]
-      )
-  );
-}
-
 

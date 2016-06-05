@@ -117,12 +117,11 @@ word Network::intercept() {
 }
 
 boolean Network::objectAnywhere() {
-  return( msg.d[0] < 25400 || msg.d[1] < 25400 || msg.d[2] < 25400 );
+  return( msg.d[0] < P_EDGE_RANGE || msg.d[1] < P_EDGE_RANGE || msg.d[2] < P_EDGE_RANGE );
 }
 
 boolean Network::objectInPlane() {
-  return( msg.d[0] <= BASE_LEN && msg.d[1] <= BASE_LEN && msg.d[2] <= BASE_LEN );
+  return( msg.d[0] <= P_EDGE_TRI && msg.d[1] <= P_EDGE_TRI && msg.d[2] <= P_EDGE_TRI );
 }
-
 
 Network N;

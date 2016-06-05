@@ -85,16 +85,13 @@ void Animation::update() {
     
     switch ( anim ) {
       case A_IDLE:
-        aCylon( map(this->intensity, 0, 255, 64, 255) );
+        aCylon( this->intensity );
         break;
       case A_OUTPLANE:
-        aCylon( map(this->intensity, 0, 255, 64, 255) );
+        aCylon( this->intensity );
         break;
       case A_INPLANE:
-        aProjection( 
-          this->position,
-          map(this->intensity, 0, 255, NUM_LEDS/2, 10)
-          );
+        aProjection( this->position, map(this->intensity, 0, 255, NUM_LEDS/2, 10) );
          break;
     }
     

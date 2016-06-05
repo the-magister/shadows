@@ -43,6 +43,8 @@ typedef struct {
 // position definition
 #define P_OFFLINE     65535  // one or more sensors haven't reported in
 #define P_ERROR       65534  // distance information can't be used to triangulate location
+#define P_EDGE_RANGE  25511  // any distance reported less than this value is "in range"
+#define P_EDGE_TRI    BASE_LEN // any distance reported less than this value is "in plane"
 
 /*
 Physical layout:
