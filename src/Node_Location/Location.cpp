@@ -170,7 +170,7 @@ void Location::heavyLift(word leftRange, word rightRange, word acrossRange, word
 
 unsigned long sqrt32(unsigned long n) {
   // see: http://www.stm32duino.com/viewtopic.php?t=56#
-  
+
   unsigned long c = 0x8000;
   unsigned long g = 0x8000;
 
@@ -194,7 +194,7 @@ unsigned long sqrt32(unsigned long n) {
 void Location::simpleLift(word leftRange, word rightRange, word &rInter, word &rRange) {
   // I'm going to avoid using sine and cosine, as those are heavy on a non-FPU machine
   // see https://en.m.wikipedia.org/wiki/Heron%27s_formula "Algebraic proof using the Pythagorean theorem"
-  
+
   const unsigned long cSq = BASE_LEN * BASE_LEN;
   const unsigned long cTwo = BASE_LEN * 2;
   unsigned long lSq = leftRange * leftRange;
@@ -202,8 +202,22 @@ void Location::simpleLift(word leftRange, word rightRange, word &rInter, word &r
 
   unsigned long d = (-rSq + lSq + cSq) / cTwo;
 
+  if ( d > BASE_LEN ) {
+    // error
+    rInter = P_ERROR;
+    rRange = P_ERROR;
+    return;
+  }
+
   unsigned long hSq = lSq - d * d;
   unsigned long h = sqrt32(hSq);
+
+  if ( h > BASE_LEN ) {
+    // error
+    rInter = P_ERROR;
+    rRange = P_ERROR;
+    return;
+  }
 
   rInter = d;
   rRange = h;
