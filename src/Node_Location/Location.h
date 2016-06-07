@@ -31,7 +31,8 @@ class Location {
     // calculate positions
     void calculatePosition(Message &msg);
     
-    void heavyLift(word leftRange, word rightRange, word acrossRange, word &rInter, word &rRange);
+//    void heavyLift(word leftRange, word rightRange, word acrossRange, word &rInter, word &rRange);
+    void simpleLift(word leftRange, word rightRange, word &rInter, word &rRange);
 
   private:
     byte myIndex;

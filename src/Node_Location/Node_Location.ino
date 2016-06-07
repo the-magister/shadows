@@ -111,7 +111,8 @@ void spoofLocation(Message &msg) {
 
   Serial << F("Spoof circle. backcheck:");
   word range, inter;
-  L.heavyLift(msg.d[0], msg.d[2], msg.d[1], inter, range);
+//  L.heavyLift(msg.d[0], msg.d[2], msg.d[1], inter, range);
+  L.simpleLift(msg.d[0], msg.d[2], inter, range);
 
 }
 
@@ -137,7 +138,8 @@ void spoofCircle(Message & msg) {
 
   Serial << F("Spoof circle. backcheck:");
   word range, inter;
-  L.heavyLift(msg.d[0], msg.d[2], msg.d[1], inter, range);
+//  L.heavyLift(msg.d[0], msg.d[2], msg.d[1], inter, range);
+  L.simpleLift(msg.d[0], msg.d[2], inter, range);
 
 }
 
