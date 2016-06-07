@@ -12,14 +12,14 @@ void Network::begin(byte nodeID, byte groupID, byte freq, byte powerLevel) {
 		Serial << F("Network. read nodeID from EEPROM=") << this->myNodeID << endl;
 	} else {
 		Serial << F("Network.  writing nodeID to EEPROM=") << nodeID << endl;
-		EEPROM.write(radioConfigLocation, nodeID);
+		EEPROM.update(radioConfigLocation, nodeID);
 		this->myNodeID = nodeID;
 	}
 	if( this->myNodeID > 200 ) {
 		Serial << F("Network. ERROR no nodeID found in EEPROM!") << endl;
 		Serial << F("Enter the node number for this node:") << endl;
 		while( ! Serial.available() );
-		EEPROM.write(radioConfigLocation, Serial.parseInt());
+		EEPROM.update(radioConfigLocation, Serial.parseInt());
 		return( this->begin(nodeID, groupID, freq, powerLevel) );
 	}
 
@@ -57,12 +57,12 @@ byte Network::whoAmI() {
 boolean Network::update() {
 	// new traffic?
 	if( radio.receiveDone() ) {   
-		Serial << F("Network. radio RX") << endl;
+//		Serial << F("Network. radio RX") << endl;
 		if( radio.DATALEN==sizeof(Message) ) {
 			// read it
 			this->msg = *(Message*)radio.DATA;  
 			this->lastRxNodeID = radio.SENDERID;
-			Serial << F("Network. message RX") << endl;
+//			Serial << F("Network. message RX") << endl;
 			return( true );
 		} else {
 			// and we might be asked to reprogram ourselves by Gateway
@@ -76,8 +76,9 @@ boolean Network::update() {
 void Network::printMessage() {
 	Serial << F("Network. MSG from ") << this->lastRxNodeID;
 	Serial << F("\td 0=") << msg.d[0] << F(" 1=") << msg.d[1] << F(" 2=") << msg.d[2];
-	Serial << F("\ti 0=") << msg.inter[0] << F(" 1=") << msg.inter[1] << F(" 2=") << msg.inter[2];
-	Serial << F("\tr 0=") << msg.range[0] << F(" 1=") << msg.range[1] << F(" 2=") << msg.range[2];
+	Serial << F("\tp 0=") << msg.inter[0] << F("- ") << msg.range[0] << F("|");
+	Serial << F("\tp 1=") << msg.inter[1] << F("- ") << msg.range[1] << F("|");
+	Serial << F("\tp 2=") << msg.inter[2] << F("- ") << msg.range[2] << F("|");
 	Serial << endl;
 }
 
@@ -99,7 +100,14 @@ boolean Network::meLast() {
 }
 
 void Network::send() {
-	Serial << F("Network. send.") << endl;
+	// put check in to make sure we're not clobbering messages from other transceivers
+	this->update();
+	while( !radio.canSend() ) {
+		// if there is traffic from a transciever, it's likely junk or it could be a reprogram signal
+		this->update();
+	}
+	
+//	Serial << F("Network. send.") << endl;
 	radio.send(BROADCAST, (const void*)(&this->msg), sizeof(Message));
 	this->lastRxNodeID = this->myNodeID;
 }

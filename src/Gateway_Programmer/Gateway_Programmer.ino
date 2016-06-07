@@ -52,7 +52,7 @@
 #define IS_RFM69HW             //uncomment only for RFM69HW! Leave out if you have RFM69W!
 
 #define SERIAL_BAUD 115200
-#define ACK_TIME    50  // # of ms to wait for an ack
+#define ACK_TIME    100  // # of ms to wait for an ack
 #define TIMEOUT     3000
 
 #ifdef __AVR_ATmega1284P__
