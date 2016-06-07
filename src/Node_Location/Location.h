@@ -37,10 +37,12 @@ class Location {
   private:
     byte myIndex;
     boolean calibrated;
-    
+
+    /*
     float areaFromDistances(float lA, float lB, float lC);
     float yFromArea(float area, float base);
     float xFromHeight(float y, float l);
+    */
 };
 
 extern Location L;
