@@ -195,12 +195,22 @@ void Location::simpleLift(word leftRange, word rightRange, word &rInter, word &r
   // I'm going to avoid using sine and cosine, as those are heavy on a non-FPU machine
   // see https://en.m.wikipedia.org/wiki/Heron%27s_formula "Algebraic proof using the Pythagorean theorem"
 
+  // first, some error checking.
+
+  // is leftRange or rightRange > BASE_LEN?  If, so, we're outside of the triagle.
+  if ( leftRange > BASE_LEN || rightRange > BASE_LEN ) {
+    rInter = P_ERROR;
+    rRange = P_ERROR;
+    return;
+  }
+
   const unsigned long cSq = BASE_LEN * BASE_LEN;
   const unsigned long cTwo = BASE_LEN * 2;
   unsigned long lSq = leftRange * leftRange;
   unsigned long rSq = rightRange * rightRange;
 
-  unsigned long d = (-rSq + lSq + cSq) / cTwo;
+//  unsigned long d = (-rSq + lSq + cSq) / cTwo;
+  unsigned long d = ((lSq + cSq)-rSq) / cTwo;
 
   if ( d > BASE_LEN ) {
     // error
