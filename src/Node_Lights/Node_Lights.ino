@@ -45,9 +45,6 @@ void loop() {
   // update the FSM
   S.update();
 
-  // update the animation
-  A.update();
-
 }
 
 void idleUpdate() {
@@ -63,6 +60,9 @@ void idleUpdate() {
     S.transitionTo( outPlane );
     A.setAnimation( A_OUTPLANE, false );
   }
+
+  // update the animation
+  A.update();
 }
 
 
@@ -93,6 +93,9 @@ void outPlaneUpdate() {
     S.transitionTo( inPlane );
     A.setAnimation( A_INPLANE );
   }
+
+  // update the animation
+  A.update();
 }
 
 void inPlaneUpdate() {
@@ -123,5 +126,10 @@ void inPlaneUpdate() {
     S.transitionTo( outPlane );
     A.setAnimation( A_OUTPLANE );
   }
+
+  // update the animation
+  A.update();
+
+
 }
 

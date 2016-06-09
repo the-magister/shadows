@@ -64,9 +64,9 @@ boolean Network::update() {
 			this->lastRxNodeID = radio.SENDERID;
 //			Serial << F("Network. message RX") << endl;
 			return( true );
-		} else {
+		} if( radio.TARGETID == this->myNodeID ) {
 			// and we might be asked to reprogram ourselves by Gateway
-			CheckForWirelessHEX(this->radio, flash, true);
+			CheckForWirelessHEX(this->radio, flash);
 		}
 	}
 
@@ -125,11 +125,15 @@ word Network::intercept() {
 }
 
 boolean Network::objectAnywhere() {
-  return( msg.d[0] < P_EDGE_RANGE || msg.d[1] < P_EDGE_RANGE || msg.d[2] < P_EDGE_RANGE );
+  return( msg.d[0] < HEIGHT_LEN || msg.d[1] < HEIGHT_LEN || msg.d[2] < HEIGHT_LEN );
 }
 
 boolean Network::objectInPlane() {
-  return( msg.d[0] <= P_EDGE_TRI && msg.d[1] <= P_EDGE_TRI && msg.d[2] <= P_EDGE_TRI );
+  return( 
+	this->objectAnywhere() &&
+	msg.inter[0] <= BASE_LEN && msg.inter[1] <= BASE_LEN && msg.inter[2] <= BASE_LEN &&
+	msg.range[0] <= BASE_LEN && msg.range[1] <= BASE_LEN && msg.range[2] <= BASE_LEN
+	);
 }
 
 Network N;

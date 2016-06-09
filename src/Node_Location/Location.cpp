@@ -1,7 +1,7 @@
 #include "Location.h"
 
 void Location::begin(byte myNodeID) {
-  Serial << F("Location. startup with nodeID=") << myNodeID << endl;
+  Serial << F("Location. startup.") << endl;
 
   digitalWrite(PIN_GND, LOW); pinMode(PIN_GND, OUTPUT);
   pinMode(PIN_PW, INPUT);
@@ -12,7 +12,9 @@ void Location::begin(byte myNodeID) {
   this->myIndex = N.whoAmI() - 10;
   Serial << F("Location.  storing distance information in messsage index=") << this->myIndex << endl;
 
-  this->calibrated = false;
+  Serial << F("Location. delay for calibration") << endl;
+  delay( ((unsigned long)this->myIndex)*1000UL );
+  this->calibrateDistance();
 }
 
 void Location::readDistance(Message &msg) {
@@ -93,14 +95,15 @@ void Location::calculatePosition(Message &msg) {
   //  heavyLift(msg.d[2], msg.d[1], msg.d[0], msg.inter[0], msg.range[0]);
   simpleLift(msg.d[2], msg.d[1], msg.inter[0], msg.range[0]);
 
-  Serial << F("Location. calculatePosition A21: ");
+  Serial << endl << F("Location. calculatePosition A21: ");
   //  heavyLift(msg.d[0], msg.d[2], msg.d[1], msg.inter[1], msg.range[1]);
   simpleLift(msg.d[0], msg.d[2], msg.inter[1], msg.range[1]);
 
-  Serial << F("Location. calculatePosition A22: ");
+  Serial << endl << F("Location. calculatePosition A22: ");
   //  heavyLift(msg.d[1], msg.d[0], msg.d[2], msg.inter[2], msg.range[2]);
   simpleLift(msg.d[1], msg.d[0], msg.inter[2], msg.range[2]);
 
+  Serial << endl;
 }
 
 /*
@@ -228,31 +231,35 @@ void Location::simpleLift(word leftRange, word rightRange, word &rInter, word &r
   // first, some error checking.
 
   // is leftRange or rightRange > BASE_LEN?  If, so, we're outside of the triagle.
-  if ( leftRange > BASE_LEN || rightRange > BASE_LEN ) {
+  if ( leftRange > (unsigned long)BASE_LEN || rightRange > (unsigned long)BASE_LEN ) {
     rInter = P_ERROR;
     rRange = P_ERROR;
     return;
   }
 
-  const unsigned long cSq = BASE_LEN * BASE_LEN;
-  const unsigned long cTwo = BASE_LEN * 2;
-  unsigned long lSq = leftRange * leftRange;
-  unsigned long rSq = rightRange * rightRange;
+  const unsigned long cSq = (unsigned long)BASE_LEN * (unsigned long)BASE_LEN;
+  const unsigned long cTwo = (unsigned long)BASE_LEN * (unsigned long)2;
+  unsigned long lSq = (unsigned long)leftRange * (unsigned long)leftRange;
+  unsigned long rSq = (unsigned long)rightRange * (unsigned long)rightRange;
 
 //  unsigned long d = (-rSq + lSq + cSq) / cTwo;
   unsigned long d = ((lSq + cSq)-rSq) / cTwo;
-
-  if ( d > BASE_LEN ) {
+  Serial << F(" d=") << d;
+  
+  if ( d > (unsigned long)BASE_LEN ) {
     // error
     rInter = P_ERROR;
     rRange = P_ERROR;
     return;
   }
 
+  Serial << F(" l^2=") << lSq << F(" d^2=") << d*d;
   unsigned long hSq = lSq - d * d;
+  Serial << F(" h^2=") << hSq;
   unsigned long h = SquareRootRounded(hSq);
+  Serial << F(" h=") << h;
 
-  if ( h > BASE_LEN ) {
+  if ( h > (unsigned long)BASE_LEN ) {
     // error
     rInter = P_ERROR;
     rRange = P_ERROR;

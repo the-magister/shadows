@@ -43,16 +43,16 @@
 #include <WirelessHEX69.h> //get it here: https://github.com/LowPowerLab/WirelessProgramming/tree/master/WirelessHEX69
 
 #define NODEID             254  //this node's ID, should be unique among nodes on this NETWORKID
-#define NETWORKID          250  //what network this node is on
+#define NETWORKID          157  //what network this node is on
 //Match frequency to the hardware version of the radio on your Moteino (uncomment one):
 //#define FREQUENCY   RF69_433MHZ
 //#define FREQUENCY   RF69_868MHZ
 #define FREQUENCY     RF69_915MHZ
 #define ENCRYPTKEY "sampleEncryptKey" //(16 bytes of your choice - keep the same on all encrypted nodes)
-//#define IS_RFM69HW             //uncomment only for RFM69HW! Leave out if you have RFM69W!
+#define IS_RFM69HW             //uncomment only for RFM69HW! Leave out if you have RFM69W!
 
 #define SERIAL_BAUD 115200
-#define ACK_TIME    50  // # of ms to wait for an ack
+#define ACK_TIME    100  // # of ms to wait for an ack
 #define TIMEOUT     3000
 
 #ifdef __AVR_ATmega1284P__

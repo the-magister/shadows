@@ -38,14 +38,14 @@
 #else
   #define LED           9 // Moteinos have LEDs on D9
 #endif
-#define SHIFTCHANNEL 1000000 //amount to shift frequency of HEX transmission to keep original channel free of the intense traffic
+//#define SHIFTCHANNEL 1000000 //amount to shift frequency of HEX transmission to keep original channel free of the intense traffic
 
 #ifndef DEFAULT_TIMEOUT
   #define DEFAULT_TIMEOUT 3000
 #endif
 
 #ifndef ACK_TIMEOUT
-  #define ACK_TIMEOUT 20
+  #define ACK_TIMEOUT 50
 #endif
 
 #include <RFM69.h>

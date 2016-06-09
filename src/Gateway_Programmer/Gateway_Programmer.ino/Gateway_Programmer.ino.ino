@@ -52,8 +52,8 @@
 #define IS_RFM69HW             //uncomment only for RFM69HW! Leave out if you have RFM69W!
 
 #define SERIAL_BAUD 115200
-#define ACK_TIME    100  // # of ms to wait for an ack
-#define TIMEOUT     3000
+//#define ACK_TIME    50  // # of ms to wait for an ack
+//#define TIMEOUT     3000
 
 #ifdef __AVR_ATmega1284P__
   #define LED           15 // Moteino MEGAs have LEDs on D15
@@ -69,10 +69,11 @@ byte targetID=0;
 void setup(){
   Serial.begin(SERIAL_BAUD);
   radio.initialize(FREQUENCY,NODEID,NETWORKID);
-// radio.encrypt(ENCRYPTKEY); //OPTIONAL
+//  radio.encrypt(ENCRYPTKEY); //OPTIONAL
 #ifdef IS_RFM69HW
   radio.setHighPower(); //only for RFM69HW!
 #endif
+  radio.promiscuous(true); // so broadcasts are received
   Serial.println("Start wireless gateway...");
 }
 
@@ -83,7 +84,7 @@ void loop(){
     if (targetID==0)
       Serial.println("TO?");
     else
-      CheckForSerialHEX((byte*)input, inputLen, radio, targetID, TIMEOUT, ACK_TIME, false);
+      CheckForSerialHEX((byte*)input, inputLen, radio, targetID);
   }
   else if (inputLen>3 && inputLen<=6 && input[0]=='T' && input[1]=='O' && input[2]==':')
   {
