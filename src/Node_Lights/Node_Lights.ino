@@ -44,7 +44,9 @@ void loop() {
 
   // update the FSM
   S.update();
-
+  
+  // update the animation
+  A.update();
 }
 
 void idleUpdate() {
@@ -60,9 +62,6 @@ void idleUpdate() {
     S.transitionTo( outPlane );
     A.setAnimation( A_OUTPLANE, false );
   }
-
-  // update the animation
-  A.update();
 }
 
 
@@ -94,8 +93,6 @@ void outPlaneUpdate() {
     A.setAnimation( A_INPLANE );
   }
 
-  // update the animation
-  A.update();
 }
 
 void inPlaneUpdate() {
@@ -103,7 +100,7 @@ void inPlaneUpdate() {
   A.setPosition(
     map(
       constrain(N.intercept(), 0, BASE_LEN),  // constrain x to be [0, BASE_LEN]
-      0, BASE_LEN, // map [0, BASE_LEN]
+      BASE_LEN, 0, // map [0, BASE_LEN]
       0, NUM_LEDS-1 // to [0, NUM_LEDS-1]
     )
   );
@@ -118,7 +115,7 @@ void inPlaneUpdate() {
   );
 
   // check for state changes
-
+/*
   // do we detect something, but out of the plane?
   if ( ! N.objectInPlane() ) {
     N.printMessage();
@@ -126,10 +123,7 @@ void inPlaneUpdate() {
     S.transitionTo( outPlane );
     A.setAnimation( A_OUTPLANE );
   }
-
-  // update the animation
-  A.update();
-
+*/
 
 }
 

@@ -30,21 +30,25 @@ typedef struct {
 #define FLASH_ID      0xEF30 // EF30 for windbond 4mbit flash
 
 // geometry of the devices
-#define BASE_LEN      7200.000 // length of LED strips (centainches)
-#define HALF_BASE     3600.000 // halfway along the LED strip (centainches)
+#define BASE_LEN      7200U // length of LED strips (centainches)
+#define HALF_BASE     3600U // halfway along the LED strip (centainches)
 
-#define HEIGHT_LEN    6235.383 // height of the sensor over the LEDs (centainches)
-#define HEIGHT_CEN    2078.461 // midpoint of triangle over LEDs (centainches)
+#define SENSOR_DIST   7550U // distance between sensors
+
+#define HEIGHT_LEN    6235U // height of the sensor over the LEDs (centainches)
+#define HEIGHT_CEN    2078U // midpoint of triangle over LEDs (centainches)
 
 // range definitions
-#define D_OFFLINE     65535  // one or more sensors haven't reported in
-#define D_ERROR       65534  // distance information is in error
+#define D_OFFLINE     65535U  // one or more sensors haven't reported in
+#define D_ERROR       65534U  // distance information is in error
 
 // position definition
-#define P_OFFLINE     65535  // one or more sensors haven't reported in
-#define P_ERROR       65534  // distance information can't be used to triangulate location
-#define P_EDGE_RANGE  25511  // any distance reported less than this value is "in range"
-#define P_EDGE_TRI    BASE_LEN // any distance reported less than this value is "in plane"
+#define P_OFFLINE     65535U  // one or more sensors haven't reported in
+#define P_ERROR       65534U  // distance information can't be used to triangulate location
+#define P_EDGE_RANGE  25511U  // any distance reported less than this value is "in range"
+#define P_EDGE_TRI    5250U // any distance reported less than this value is "in plane"
+
+
 
 /*
 Physical layout:

@@ -125,15 +125,15 @@ word Network::intercept() {
 }
 
 boolean Network::objectAnywhere() {
-  return( msg.d[0] < HEIGHT_LEN || msg.d[1] < HEIGHT_LEN || msg.d[2] < HEIGHT_LEN );
+  return( msg.d[this->myNodeID-20] <= HEIGHT_LEN );
 }
 
 boolean Network::objectInPlane() {
   return( 
 	this->objectAnywhere() &&
-	msg.inter[0] <= BASE_LEN && msg.inter[1] <= BASE_LEN && msg.inter[2] <= BASE_LEN &&
-	msg.range[0] <= BASE_LEN && msg.range[1] <= BASE_LEN && msg.range[2] <= BASE_LEN
-	);
+	msg.inter[this->myNodeID-20] <= BASE_LEN &&
+	msg.range[this->myNodeID-20] <= HEIGHT_LEN 
+  );
 }
 
 Network N;

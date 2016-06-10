@@ -49,7 +49,7 @@ void Location::readDistance(Message &msg) {
     decaInches = ( pulseTime * 100 ) / 147; // max 25510.
   }
 
-  Serial << F("Location. pulseTime (uS)=") << pulseTime << F(" range (decainches)=") << decaInches << F(" range (ft)=") << decaInches / 1200 << endl;
+  Serial << F("Location. pulseTime (uS)=") << pulseTime << F(" range (decainches)=") << decaInches << F(" range (ft)=") << (float)decaInches/1200.0 << endl;
   msg.d[this->myIndex] = decaInches;
 }
 
@@ -91,6 +91,13 @@ void Location::calculatePosition(Message &msg) {
     return;
   }
 
+  // use Vivani's Theorem to adjust distances to centerpoint(ish)
+  // see: https://en.wikipedia.org/wiki/Viviani%27s_theorem
+
+  float totalD = (float)msg.d[0] + (float)msg.d[1] + (float)msg.d[2];
+  const float heightD = sqrt(3.0)/2.0*(float)SENSOR_DIST;
+  float bumpD = heightD/totalD;
+  
   Serial << F("Location. calculatePosition A20: ");
   //  heavyLift(msg.d[2], msg.d[1], msg.d[0], msg.inter[0], msg.range[0]);
   simpleLift(msg.d[2], msg.d[1], msg.inter[0], msg.range[0]);
@@ -237,8 +244,8 @@ void Location::simpleLift(word leftRange, word rightRange, word &rInter, word &r
     return;
   }
 
-  const unsigned long cSq = (unsigned long)BASE_LEN * (unsigned long)BASE_LEN;
-  const unsigned long cTwo = (unsigned long)BASE_LEN * (unsigned long)2;
+  const unsigned long cSq = (unsigned long)SENSOR_DIST * (unsigned long)SENSOR_DIST;
+  const unsigned long cTwo = (unsigned long)SENSOR_DIST * (unsigned long)2;
   unsigned long lSq = (unsigned long)leftRange * (unsigned long)leftRange;
   unsigned long rSq = (unsigned long)rightRange * (unsigned long)rightRange;
 
@@ -246,7 +253,7 @@ void Location::simpleLift(word leftRange, word rightRange, word &rInter, word &r
   unsigned long d = ((lSq + cSq)-rSq) / cTwo;
   Serial << F(" d=") << d;
   
-  if ( d > (unsigned long)BASE_LEN ) {
+  if ( d > (unsigned long)SENSOR_DIST ) {
     // error
     rInter = P_ERROR;
     rRange = P_ERROR;
@@ -254,13 +261,21 @@ void Location::simpleLift(word leftRange, word rightRange, word &rInter, word &r
   }
 
   Serial << F(" l^2=") << lSq << F(" d^2=") << d*d;
-  unsigned long hSq = lSq - d * d;
-  Serial << F(" h^2=") << hSq;
-  unsigned long h = SquareRootRounded(hSq);
-  Serial << F(" h=") << h;
-
+  unsigned long d2 = d * d;
+  unsigned long h;
+  if( lSq > d2 ) {
+    unsigned long hSq = lSq - d2;
+    Serial << F(" h^2=") << hSq;
+    h = SquareRootRounded(hSq);
+    Serial << F(" h=") << h;
+  } else {
+    h = 0; // right at the tube
+  }
+  
   if ( h > (unsigned long)BASE_LEN ) {
-    // error
+     Serial << F("Sensor error") << endl;
+    while(1);
+   // error
     rInter = P_ERROR;
     rRange = P_ERROR;
     return;
