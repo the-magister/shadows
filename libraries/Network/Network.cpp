@@ -102,38 +102,32 @@ boolean Network::meLast() {
 void Network::send() {
 	// put check in to make sure we're not clobbering messages from other transceivers
 	this->update();
-	while( !radio.canSend() ) {
-		// if there is traffic from a transciever, it's likely junk or it could be a reprogram signal
-		this->update();
+	if( radio.SENDERID == PROGRAMMER_NODE ) {
+		// we need to wait until the airwaves are clear for 5 seconds.
+		Serial << F("Network. Programmer traffic. Waiting...") << endl;
+		delay(30000);
+		Serial << F("Network. All clear.") << endl;
 	}
-	
+
 //	Serial << F("Network. send.") << endl;
 	radio.send(BROADCAST, (const void*)(&this->msg), sizeof(Message));
 	this->lastRxNodeID = this->myNodeID;
 }
 
-word Network::distance() {
+word Network::myDistance() {
   return( this->msg.d[this->myNodeID-20] );
 }
 
-word Network::range() {
+word Network::myRange() {
   return( this->msg.range[this->myNodeID-20] );
 }
 
-word Network::intercept() {
+word Network::myIntercept() {
   return( this->msg.inter[this->myNodeID-20] );
 }
 
-boolean Network::objectAnywhere() {
-  return( msg.d[this->myNodeID-20] <= HEIGHT_LEN );
-}
-
 boolean Network::objectInPlane() {
-  return( 
-	this->objectAnywhere() &&
-	msg.inter[this->myNodeID-20] <= BASE_LEN &&
-	msg.range[this->myNodeID-20] <= HEIGHT_LEN 
-  );
+  return( msg.d[0]<=IN_PLANE || msg.d[1]<=IN_PLANE || msg.d[2]<=IN_PLANE );
 }
 
 Network N;

@@ -18,6 +18,8 @@
 #define GROUPID 157  // local group
 #define POWERLEVEL 31 // 0-31, 31 being maximal
 
+#define PROGRAMMER_NODE 254 // detecting traffic from this node should tell everyone to STFU already
+
 typedef struct {
   word d[3];      // distance relative to sensors; pull by d[this->myNodeID-10]
   word inter[3];  // projected intersection on lights; pull by x[this->myNodeID-20]
@@ -35,8 +37,11 @@ typedef struct {
 
 #define SENSOR_DIST   7550U // distance between sensors
 
-#define HEIGHT_LEN    6235U // height of the sensor over the LEDs (centainches)
-#define HEIGHT_CEN    2078U // midpoint of triangle over LEDs (centainches)
+//#define HEIGHT_LEN    6235U // height of the sensor over the LEDs (centainches)
+#define HEIGHT_LEN    6550U // height of the sensor over the LEDs (centainches)
+
+#define IN_CORNER     1200U   // any sensor distance closer than this indicates the object is cornered.
+#define IN_PLANE      HEIGHT_LEN-1000U    // any sensor distance less than this indicates an object in plane
 
 // range definitions
 #define D_OFFLINE     65535U  // one or more sensors haven't reported in
@@ -44,11 +49,7 @@ typedef struct {
 
 // position definition
 #define P_OFFLINE     65535U  // one or more sensors haven't reported in
-#define P_ERROR       65534U  // distance information can't be used to triangulate location
-#define P_EDGE_RANGE  25511U  // any distance reported less than this value is "in range"
-#define P_EDGE_TRI    5250U // any distance reported less than this value is "in plane"
-
-
+#define P_ERROR       65534U  // distance information can't be used to triangulate locations
 
 /*
 Physical layout:
@@ -102,14 +103,12 @@ class Network {
     void send();
 
     // for Node_Lights
-	// is there an object outside the plane?
-	boolean objectAnywhere();
     // is there an object in the plane?
     boolean objectInPlane();
     // return the positional information, relative to me
-	word distance();
-    word intercept();
-    word range();
+	word myDistance();
+    word myIntercept();
+    word myRange();
     
   private:
     boolean inStartup;

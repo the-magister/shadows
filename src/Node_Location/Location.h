@@ -32,12 +32,17 @@ class Location {
     void calculatePosition(Message &msg);
     
 //    void heavyLift(word leftRange, word rightRange, word acrossRange, word &rInter, word &rRange);
-    void simpleLift(word leftRange, word rightRange, word &rInter, word &rRange);
+//    void simpleLift(word leftRange, word rightRange, word &rInter, word &rRange);
 
   private:
     byte myIndex;
     boolean calibrated;
+    word maxDist[3];
 
+    word intercept(unsigned long lR, unsigned long rR);
+    word height(unsigned long lR, unsigned long intercept);
+    unsigned long SquareRootRounded(unsigned long a_nInput);
+    word heightAlt(unsigned long aR);
     /*
     float areaFromDistances(float lA, float lB, float lC);
     float yFromArea(float area, float base);

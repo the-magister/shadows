@@ -14,7 +14,7 @@ void Animation::begin(byte startPos, byte startIntensity, byte startAnim) {
 
   random16_add_entropy(analogRead(A0));
 
-  this->setFPS();
+//  this->setFPS();
   this->setMasterBrightness();
   this->position = startPos;
   this->intensity = startIntensity;
@@ -24,6 +24,7 @@ void Animation::begin(byte startPos, byte startIntensity, byte startAnim) {
   Serial << F("Animation. Startup complete.") << endl;
 }
 
+/*
 // sets FPS
 void Animation::setFPS(uint16_t framesPerSecond) {
   this->fps = framesPerSecond;
@@ -31,6 +32,7 @@ void Animation::setFPS(uint16_t framesPerSecond) {
   this->pushNextFrame.interval(this->pushInterval);
   Serial << F("Animation. FPS= ") << framesPerSecond << F(". show update=") << this->pushInterval << F(" ms.") << endl;
 }
+*/
 
 // sets master brightness
 void Animation::setMasterBrightness(byte masterBrightness) {
@@ -62,11 +64,11 @@ void Animation::setIntensity(byte intensity) {
 
 // runs the animation
 void Animation::update() {
-
+/*
   // pre-calculate the next frame
   static boolean nextFrameReady = false;
   if ( ! nextFrameReady ) {
-
+*/
     /*
     // do we need to shift the center of the animation?
     if ( this->currentPos > this->targetPos ) {
@@ -85,21 +87,18 @@ void Animation::update() {
     
     switch ( anim ) {
       case A_IDLE:
-        aCylon( this->intensity );
-        break;
-      case A_OUTPLANE:
-        aCylon( this->intensity );
+        aCylon( 255 );
         break;
       case A_INPLANE:
         aProjection( this->position, map(this->intensity, 0, 255, NUM_LEDS/2, 10) );
          break;
     }
-    
+/*    
     nextFrameReady = true;
   }
-
+*/
   // ready to push next frame?
-  if ( pushNextFrame.check() ) {
+//  if ( pushNextFrame.check() ) {
     FastLED.show(); // push
 
     static byte pushCount=0;
@@ -110,23 +109,25 @@ void Animation::update() {
    
       int repFPS = FastLED.getFPS();
   
-      if( repFPS > 0 && repFPS > this->fps+1 ) {
-        this->pushInterval++;
-        this->pushNextFrame.interval(this->pushInterval);
-        Serial << F("Animation. fps reported=") << repFPS << F(" pushInterval=") << this->pushInterval << endl;
-      }
+  //    if( repFPS > 0 && repFPS > this->fps+1 ) {
+  //      this->pushInterval++;
+  //      this->pushNextFrame.interval(this->pushInterval);
+  //      Serial << F("Animation. fps reported=") << repFPS << F(" pushInterval=") << this->pushInterval << endl;
+        Serial << F("Animation. fps reported=") << repFPS  << endl;
+/*      }
       if( repFPS>0 && repFPS < this->fps-1 ) {
         this->pushInterval--;
         this->pushInterval = this->pushInterval < 0 ? 0 : this->pushInterval;
         this->pushNextFrame.interval(this->pushInterval);
         Serial << F("Animation. fps reported=") << repFPS << F(" pushInterval=") << this->pushInterval << endl;
       }
+*/      
     }
     
-    nextFrameReady = false; // setup for next frame calculation
-    pushNextFrame.reset();  // setup for next frame push
+//    nextFrameReady = false; // setup for next frame calculation
+//    pushNextFrame.reset();  // setup for next frame push
     
-  }
+//  }
 
 }
 
@@ -137,7 +138,7 @@ void Animation::aCylon(byte bright) {
   fadeToBlackBy( leds, NUM_LEDS, 10 );
 
   // set the speed the pixel travels 
-  byte posVal = beatsin8(13, 0, NUM_LEDS); // see: lib8tion.h
+  byte posVal = beatsin16(13, 0, (word)NUM_LEDS*100)/100; // see: lib8tion.h
 
   // cycle through hues, using intensity to set value
   static byte hue = 0;

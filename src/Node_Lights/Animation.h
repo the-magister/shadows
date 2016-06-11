@@ -28,7 +28,6 @@ FASTLED_USING_NAMESPACE
 // enumerate animation modes
 enum animation_t {
   A_IDLE=0,
-  A_OUTPLANE,
   A_INPLANE,
   
   N_ANIMATIONS

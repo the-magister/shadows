@@ -12,8 +12,8 @@
 
 #include "Location.h"
 
-#define SPOOF_LOCATION 0
-#define SPOOF_CIRCLE 0
+//#define SPOOF_LOCATION 0
+//#define SPOOF_CIRCLE 0
 
 #define CALIBRATION_INTERVAL 60000UL // calibrate every minute if there's nothing going on
 const word noRange = round(37500.0 * 100.0 / 147.0);
@@ -60,16 +60,16 @@ void loop()
     }
 
     // update distance
-    if ( ! SPOOF_LOCATION && ! SPOOF_CIRCLE )
+ //   if ( ! SPOOF_LOCATION && ! SPOOF_CIRCLE )
       L.readDistance( N.msg );
-
+/*
     if ( SPOOF_LOCATION ) {
       spoofLocation( N.msg );
     }
     if ( SPOOF_CIRCLE ) {
       spoofCircle( N.msg );
     }
-
+*/
     // calculate positions
     L.calculatePosition( N.msg );
 
@@ -83,7 +83,7 @@ void loop()
   }
 
   // do I need to resend position information?
-  if( N.meLast() && resendInterval.check() ) {
+  if ( N.meLast() && resendInterval.check() ) {
     digitalWrite(LED, HIGH);
     N.send();
     // show
@@ -91,7 +91,7 @@ void loop()
     digitalWrite(LED, LOW);
   }
 }
-
+/*
 void spoofLocation(Message &msg) {
   // pick a random x
   int x = random(1, BASE_LEN);
@@ -111,7 +111,7 @@ void spoofLocation(Message &msg) {
 
   Serial << F("Spoof circle. backcheck:");
   word range, inter;
-//  L.heavyLift(msg.d[0], msg.d[2], msg.d[1], inter, range);
+  //  L.heavyLift(msg.d[0], msg.d[2], msg.d[1], inter, range);
   L.simpleLift(msg.d[0], msg.d[2], inter, range);
 
 }
@@ -138,7 +138,7 @@ void spoofCircle(Message & msg) {
 
   Serial << F("Spoof circle. backcheck:");
   word range, inter;
-//  L.heavyLift(msg.d[0], msg.d[2], msg.d[1], inter, range);
+  //  L.heavyLift(msg.d[0], msg.d[2], msg.d[1], inter, range);
   L.simpleLift(msg.d[0], msg.d[2], inter, range);
 
 }
@@ -148,4 +148,4 @@ float mapf(float x, float in_min, float in_max, float out_min, float out_max)
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
-
+*/

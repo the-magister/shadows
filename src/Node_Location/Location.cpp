@@ -5,7 +5,11 @@ void Location::begin(byte myNodeID) {
 
   digitalWrite(PIN_GND, LOW); pinMode(PIN_GND, OUTPUT);
   pinMode(PIN_PW, INPUT);
+
   digitalWrite(PIN_RX, LOW); pinMode(PIN_RX, OUTPUT);
+//  digitalWrite(PIN_RX, LOW);
+//  pinModeFast(PIN_RX,OUTPUT);
+
   digitalWrite(PIN_VCC, HIGH); pinMode(PIN_VCC, OUTPUT);
 
   // index accessor
@@ -15,6 +19,8 @@ void Location::begin(byte myNodeID) {
   Serial << F("Location. delay for calibration") << endl;
   delay( ((unsigned long)this->myIndex)*1000UL );
   this->calibrateDistance();
+
+  maxDist[0] = maxDist[1] = maxDist[2] = HEIGHT_LEN;
 }
 
 void Location::readDistance(Message &msg) {
@@ -23,16 +29,58 @@ void Location::readDistance(Message &msg) {
     this->calibrateDistance();
   }
 
-  Serial << F("Location. ranging");
-  unsigned long pulseTime = 0;
+//  Serial << F("Location. ranging");
+/*
+  const byte N_samples = 3;
+  unsigned long pulseTime[N_samples];
+//  digitalWrite(PIN_RX, HIGH); // range
+//  digitalWriteFast(PIN_RX,HIGH);
+
+  for( byte i=0; i<N_samples; i++ ) {
+    pulseTime[i] = pulseIn(PIN_PW, HIGH);
+  }
+//  digitalWrite(PIN_RX, LOW); // stop ranging
+//  digitalWriteFast(PIN_RX, LOW);
+
+  // constrain spurious readings to be within triangle
+  const unsigned long maxTime = 147.0*(float)HEIGHT_LEN/100.0;
+  unsigned long sumTime = 0;
+  for( byte i=0; i<N_samples; i++ ) {
+    Serial << F("Location.  pulseTime=") << pulseTime[i] << endl;
+//    sumTime += pulseTime[i] > maxTime ? maxTime : pulseTime[i];
+    sumTime += pulseTime[i];
+  }
+  // average
+  unsigned long avgTime = sumTime / N_samples;
+
+  // convert to distance in decainches; 1 inch = 100 decainches
+  unsigned long decaInches = ( avgTime * 100 ) / 147; // max HEIGHT_LEN
+ 
+//  Serial << F("Location. pulseTime (uS)=") << pulseTime << F(" range (decainches)=") << decaInches << F(" range (ft)=") << (float)decaInches/1200.0 << endl;
+  msg.d[this->myIndex] = decaInches;
+*/
+
+  // record the PW length
+  digitalWrite(PIN_RX, HIGH); // range
+  unsigned long pulseTime = pulseIn(PIN_PW, HIGH);
+//  pulseTime = pulseIn(PIN_PW, HIGH);
+  digitalWrite(PIN_RX, LOW); // stop ranging
+
+  // convert to distance in decainches; 1 inch = 100 decainches
+  unsigned long decaInches = ( pulseTime * 100 ) / 147; // max HEIGHT_LEN
+
+  // record 
+  msg.d[this->myIndex] = decaInches;
+  /*
   while ( pulseTime == 0UL ) {
-    Serial << F("r ");
+//    Serial << F("r ");
     digitalWrite(PIN_RX, HIGH); // range
     pulseTime = pulseIn(PIN_PW, HIGH);
     digitalWrite(PIN_RX, LOW); // stop ranging
   }
-  Serial << endl;
-
+//  Serial << endl;
+*/
+/*
   // convert to distance in decainches; 1 inch = 100 decainches
   unsigned long decaInches; // promoted to 32-bit to handle *100 step later on
 
@@ -51,6 +99,7 @@ void Location::readDistance(Message &msg) {
 
   Serial << F("Location. pulseTime (uS)=") << pulseTime << F(" range (decainches)=") << decaInches << F(" range (ft)=") << (float)decaInches/1200.0 << endl;
   msg.d[this->myIndex] = decaInches;
+*/
 }
 
 void Location::calibrateDistance() {
@@ -81,16 +130,83 @@ void Location::calibrateDistance() {
   this->calibrated = true;
 }
 
+void cornerCase(Message &msg, byte aI, byte rI, byte lI) {
+    // across
+    msg.inter[aI] = SENSOR_DIST/2;
+    msg.range[aI] = HEIGHT_LEN - IN_CORNER;
+    // to the right
+    msg.inter[rI] = IN_CORNER/2;
+    msg.range[rI] = IN_CORNER/2;
+    // to the left
+    msg.inter[lI] = SENSOR_DIST - IN_CORNER/2;
+    msg.range[lI] = IN_CORNER/2;
+}
+
 void Location::calculatePosition(Message &msg) {
 
-  // if any of the distance information is outside of the triangle, no need to calculate
-  if ( msg.d[0] > BASE_LEN || msg.d[1] > BASE_LEN || msg.d[2] > BASE_LEN ) {
-    Serial << F("Location. out-of-range.") << endl;
-    msg.inter[0] = msg.inter[1] = msg.inter[2] = P_ERROR;
-    msg.range[0] = msg.range[1] = msg.range[2] = P_ERROR;
+  // corner cases... literally.
+  if( msg.d[0]<=IN_CORNER ) {
+    cornerCase(msg, 0, 1, 2);
+    return;
+  }
+  if( msg.d[1]<=IN_CORNER ) {
+    cornerCase(msg, 1, 2, 0);
+    return;
+  }
+  if( msg.d[2]<=IN_CORNER ) {
+    cornerCase(msg, 2, 0, 1);
     return;
   }
 
+  // use left and right sensors to determine intercept at base
+  msg.inter[0] = intercept(msg.d[2], msg.d[1]);
+  msg.inter[1] = intercept(msg.d[0], msg.d[2]);
+  msg.inter[2] = intercept(msg.d[1], msg.d[0]);
+
+  // use left sensor and intercept to determine height
+//  msg.range[0] = height(msg.d[2], msg.inter[0]);
+//  msg.range[1] = height(msg.d[0], msg.inter[1]);
+//  msg.range[2] = height(msg.d[1], msg.inter[2]);
+
+  // use the across sensor to approximate height
+  for( byte i=0; i<3; i++ ) {
+    if( msg.d[i] < HEIGHT_LEN ) {
+      msg.range[i] = HEIGHT_LEN - msg.d[i];
+    } else {
+      msg.range[i] = 0;
+    }
+  }
+  /*
+  // reset range calculations
+  msg.range[0] = msg.range[1] = msg.range[2] = P_ERROR;
+
+  // count the intercept errors
+  byte interError = 0;
+  for( byte i=0; i<3; i++) {
+    if( msg.inter[i] == P_ERROR ) {
+      interError++;
+    }
+  }
+
+  if( interError == 3 ) {
+    // uh, that's a problem.
+    return;
+  }
+
+  if( interError == 2 ) {
+    // must be in a corner
+    // should be able to do something here, but bail out for now
+    return;
+  }
+
+  if( interError == 1 ) {
+    byte fixThis = 0;
+    if( msg.inter[1] == P_ERROR ) fixThis = 1;
+    if( msg.inter[2] == P_ERROR ) fixThis = 2;
+    // use Vivani's theorem: https://en.wikipedia.org/wiki/Viviani%27s_theorem
+    msg.inter[fixThis] = msg.d[fixThis]-
+  }
+  
   // use Vivani's Theorem to adjust distances to centerpoint(ish)
   // see: https://en.wikipedia.org/wiki/Viviani%27s_theorem
 
@@ -111,6 +227,8 @@ void Location::calculatePosition(Message &msg) {
   simpleLift(msg.d[1], msg.d[0], msg.inter[2], msg.range[2]);
 
   Serial << endl;
+
+  */
 }
 
 /*
@@ -197,11 +315,10 @@ void Location::heavyLift(word leftRange, word rightRange, word acrossRange, word
  *
  * \return Integer square root of the input value.
  */
-uint32_t SquareRootRounded(uint32_t a_nInput)
-{
-    uint32_t op  = a_nInput;
-    uint32_t res = 0;
-    uint32_t one = 1uL << 30; // The second-to-top bit is set: use 1u << 14 for uint16_t type; use 1uL<<30 for uint32_t type
+unsigned long Location::SquareRootRounded(unsigned long a_nInput) {
+    unsigned long op  = a_nInput;
+    unsigned long res = 0;
+    unsigned long one = 1uL << 30; // The second-to-top bit is set: use 1u << 14 for uint16_t type; use 1uL<<30 for uint32_t type
 
     // "one" starts at the highest power of four <= than the argument.
     while (one > op)
@@ -229,8 +346,46 @@ uint32_t SquareRootRounded(uint32_t a_nInput)
     return res;
 }
 
+word Location::intercept(unsigned long lR, unsigned long rR) {
+  
+  // see https://en.m.wikipedia.org/wiki/Heron%27s_formula "Algebraic proof using the Pythagorean theorem"
+  const unsigned long cSq = (unsigned long)SENSOR_DIST * (unsigned long)SENSOR_DIST;
+  const unsigned long cTwo = (unsigned long)SENSOR_DIST * (unsigned long)2;
+
+  unsigned long lSq = lR * lR;
+  unsigned long rSq = rR * rR;
+
+  unsigned long d = ((lSq + cSq)-rSq) / cTwo;
+
+  d = d>(unsigned long)SENSOR_DIST ? (unsigned long)SENSOR_DIST : d;
+
+  return( d ); 
+}
+
+word Location::height(unsigned long lR, unsigned long intercept) {
+  
+  unsigned long lSq = lR * lR;
+  unsigned long iSq = intercept * intercept;
+  unsigned long h;
+  if( lSq > iSq ) {
+    unsigned long hSq = lSq - iSq;
+//    Serial << F(" h^2=") << hSq;
+    h = SquareRootRounded(hSq);
+//    Serial << F(" h=") << h;
+  } else {
+    h = lR; // in the corner
+  }
+
+  return( h );
+}
 
 
+word Location::heightAlt(unsigned long aR) {  
+  return( HEIGHT_LEN - aR );
+}
+
+
+/*
 void Location::simpleLift(word leftRange, word rightRange, word &rInter, word &rRange) {
   // I'm going to avoid using sine and cosine, as those are heavy on a non-FPU machine
   // see https://en.m.wikipedia.org/wiki/Heron%27s_formula "Algebraic proof using the Pythagorean theorem"
@@ -284,5 +439,6 @@ void Location::simpleLift(word leftRange, word rightRange, word &rInter, word &r
   rInter = d;
   rRange = h;
 }
+*/
 
 Location L;
