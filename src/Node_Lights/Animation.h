@@ -36,7 +36,7 @@ enum animation_t {
 class Animation {
   public:
     // initialize led strips
-    void begin(byte startPos=NUM_LEDS/2, byte startIntensity=0, byte startAnim=A_IDLE);
+    void begin();
     // which calls the following functions with their defaults:
     
     // set frames per second
@@ -46,22 +46,18 @@ class Animation {
 
     // animation control
     void setAnimation(byte animation=A_IDLE, boolean clearStrip=true);
-    void setPosition(byte position);
-    void setIntensity(byte intensity);
+    void setCenter(byte position);
+    void setExtent(byte extent);
     
     // updates the animation
     void update();
 
   private:
-    Metro pushNextFrame;
-
     byte anim;
     
-    byte position, intensity;
-
-    byte fps;
-    int pushInterval;
-
+    byte position, extent;
+    byte currentPosition, currentExtent;
+    
     // animation layer
     void aCylon(byte bright);
     void aProjection(byte pos, byte extent);

@@ -49,14 +49,12 @@ void loop() {
 }
 
 void idleUpdate() {
-  // drive the intensity back to baseline
-  A.setIntensity( 255 );
- 
   // check for state changes
+  static Metro goInPlaneTimeout(500UL);
+  if( !N.objectInPlane() ) goInPlaneTimeout.reset();
 
   // do we detect something out there?
-  if ( N.objectInPlane() ) {
-    N.printMessage();
+  if ( goInPlaneTimeout.check() ) {
     Serial << F("State.  idle->outPlane.") << endl;
     S.transitionTo( inPlane );
     A.setAnimation( A_INPLANE, false );
@@ -64,29 +62,30 @@ void idleUpdate() {
 }
 
 void inPlaneUpdate() {
-  // drive shadow location according to intercept
-  A.setPosition(
+  // drive shadow center according to intercept
+  A.setCenter(
     map(
-      constrain(N.myIntercept(), 0, BASE_LEN),  // constrain x to be [0, BASE_LEN]
-      BASE_LEN, 0, // map [0, BASE_LEN]
+      constrain(N.myIntercept(), 0, SENSOR_DIST),  // constrain x to be [0, BASE_LEN]
+      SENSOR_DIST, 0, // map [BASE_LEN, 0]
       0, NUM_LEDS-1 // to [0, NUM_LEDS-1]
     )
   );
 
-  // drive the intensity according to range
-  A.setIntensity(
+  // drive shadow extent according to range
+  A.setExtent(
     map(
-      constrain(N.myRange(), 0, BASE_LEN),
-      0, BASE_LEN, // map [0, BASE_LEN]
-      0, NUM_LEDS-1 // to [0, NUM_LEDS-1]
+      constrain(N.myRange(), 0, HEIGHT_LEN),
+      0, HEIGHT_LEN, // map [0, HEIGHT_LEN]
+      0, NUM_LEDS/2 // to [0, NUM_LEDS/2]
     )
   );
 
   // check for state changes
-
-  // do we detect something, but out of the plane?
-  if ( ! N.objectInPlane() ) {
-    N.printMessage();
+  static Metro goIdleTimeout(1000UL);
+  if( N.objectInPlane() ) goIdleTimeout.reset();
+  
+  // nothing to see here?
+  if ( goIdleTimeout.check() ) {
     Serial << F("State.  inPlane->idle.") << endl;
     S.transitionTo( idle );
     A.setAnimation( A_IDLE );

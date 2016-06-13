@@ -7,19 +7,18 @@ FASTLED_USING_NAMESPACE
 CRGB leds[NUM_LEDS];
 
 // startup
-void Animation::begin(byte startPos, byte startIntensity, byte startAnim) {
+void Animation::begin() {
   // tell FastLED about the LED strip configuration; mirrored strips
   FastLED.addLeds<APA102, PIN_DATA1, PIN_CLK>(leds, NUM_LEDS).setCorrection(TypicalSMD5050);
   FastLED.addLeds<APA102, PIN_DATA2, PIN_CLK>(leds, NUM_LEDS).setCorrection(TypicalSMD5050);
 
   random16_add_entropy(analogRead(A0));
 
-//  this->setFPS();
-  this->setMasterBrightness();
-  this->position = startPos;
-  this->intensity = startIntensity;
+  this->setMasterBrightness(255);
+  this->position = this->currentPosition = NUM_LEDS/2;
+  this->extent = this->currentExtent = 0;
 
-  this->setAnimation(startAnim);
+  this->setAnimation(A_IDLE);
 
   Serial << F("Animation. Startup complete.") << endl;
 }
@@ -48,17 +47,17 @@ void Animation::setAnimation(byte animation, boolean clearStrip) {
   if ( clearStrip ) fill_solid(leds, NUM_LEDS, CRGB(0, 0, 0));
 }
 
-void Animation::setPosition(byte position) {
+void Animation::setCenter(byte position) {
   if ( this->position != position ) {
     Serial << F("Animation. position= ") << position << endl;
     this->position = position;
   }
 }
 
-void Animation::setIntensity(byte intensity) {
-  if ( this->intensity != intensity ) {
-    Serial << F("Animation. intensity= ") << intensity << endl;
-    this->intensity = intensity;
+void Animation::setExtent(byte extent) {
+  if ( this->extent != extent ) {
+    Serial << F("Animation. extent= ") << extent << endl;
+    this->extent = extent;
   }
 }
 
@@ -69,28 +68,28 @@ void Animation::update() {
   static boolean nextFrameReady = false;
   if ( ! nextFrameReady ) {
 */
-    /*
+    
     // do we need to shift the center of the animation?
-    if ( this->currentPos > this->targetPos ) {
-      this->currentPos--;
-    } else if ( this->currentPos < this->targetPos ) {
-      this->currentPos++;
+    if ( this->currentPosition > this->position ) {
+      this->currentPosition--;
+    } else if ( this->currentPosition < this->position ) {
+      this->currentPosition++;
     }
 
-    // do we need to shift the intensity of the animation?
-    if ( this->currentIntensity > this->targetIntensity ) {
-      this->currentIntensity--;
-    } else if ( this->currentIntensity < this->targetIntensity ) {
-      this->currentIntensity++;
+    // do we need to shift the extent of the animation?
+    if ( this->currentExtent > this->extent ) {
+      this->currentExtent--;
+    } else if ( this->currentExtent < this->extent ) {
+      this->currentExtent++;
     }
-    */
+    
     
     switch ( anim ) {
       case A_IDLE:
         aCylon( 255 );
         break;
       case A_INPLANE:
-        aProjection( this->position, map(this->intensity, 0, 255, NUM_LEDS/2, 10) );
+        aProjection( this->currentPosition, this->currentExtent );
          break;
     }
 /*    
@@ -140,7 +139,7 @@ void Animation::aCylon(byte bright) {
   // set the speed the pixel travels 
   byte posVal = beatsin16(13, 0, (word)NUM_LEDS*100)/100; // see: lib8tion.h
 
-  // cycle through hues, using intensity to set value
+  // cycle through hues, using extent to set value
   static byte hue = 0;
   leds[posVal] = CHSV(hue++, 255, bright );
 }
@@ -164,7 +163,8 @@ void Animation::aProjection(byte center, byte extent) {
   byte left_s = constrain((int)qsub8(center, 1), 0, NUM_LEDS-1);
   byte left_e = constrain((int)qsub8(left_s, extent), 0, NUM_LEDS-1);
 
-  byte brightness = map(constrain(2*extent, 0, NUM_LEDS-1), 0, NUM_LEDS-1, 255, 16); 
+//  byte brightness = map(constrain(2*extent, 0, NUM_LEDS-1), 0, NUM_LEDS-1, 255, 16); 
+  byte brightness = map(constrain(extent, 0, NUM_LEDS/2), 0, NUM_LEDS/2, 255, 16); 
   for( byte i=left_e;i<=right_e;i++) {
     leds[i] = CHSV(hue, 255, brightness);
 //    leds[i] = CHSV(hue, 255, map(triwave8(map(i,left_e,right_e,0,255)), 0, 255, 0, bright_max) );
@@ -192,7 +192,7 @@ void Animation::fireAnimation() {
   byte leftPos = constrain(this->currentPos, 0, NUM_LEDS - 1);
   byte rightPos = constrain(this->currentPos + 1, 0, NUM_LEDS - 1);
 
-  byte cooling = map(this->currentIntensity, 0, 255, 30, 10);
+  byte cooling = map(this->currentExtent, 0, 255, 30, 10);
 
   // Array of temperature readings at each simulation cell
   static byte heat[NUM_LEDS];
@@ -213,10 +213,10 @@ void Animation::fireAnimation() {
 
   // Step 3.  Randomly ignite new 'sparks' of heat near center position
   if ( random8() < 128 ) {
-//    heat[leftPos] = qadd8( heat[leftPos], random8(map(this->currentIntensity,0,255,64,255), 255) );
-    heat[leftPos] = qadd8( heat[leftPos], map(this->currentIntensity,0,255,128,255) );
-//    heat[rightPos] = qadd8( heat[rightPos], random8(map(this->currentIntensity,0,255,64,255), 255)  );
-    heat[rightPos] = qadd8( heat[rightPos], map(this->currentIntensity,0,255,128,255) );
+//    heat[leftPos] = qadd8( heat[leftPos], random8(map(this->currentExtent,0,255,64,255), 255) );
+    heat[leftPos] = qadd8( heat[leftPos], map(this->currentExtent,0,255,128,255) );
+//    heat[rightPos] = qadd8( heat[rightPos], random8(map(this->currentExtent,0,255,64,255), 255)  );
+    heat[rightPos] = qadd8( heat[rightPos], map(this->currentExtent,0,255,128,255) );
   }
 
   // Step 4.  Map from heat cells to LED colors
