@@ -47,6 +47,7 @@ void loop()
   if ( N.update() ) {
     Serial << F("RX: "); N.printMessage();
     resendInterval.reset();
+//    Serial << F("meNext?") << N.meNext() << endl;
   }
 
   // do I need to update the position information?

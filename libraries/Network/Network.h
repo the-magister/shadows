@@ -26,6 +26,15 @@ typedef struct {
   word range[3];  // projected distnace lights; pull by y[this->myNodeID-20]
 } Message;
 
+enum systemState {
+	M_CALIBRATE=0,	// calibration of sensors
+	M_NORMAL,		// normal operation
+	M_PROGRAM,		// OTA programming
+	M_REBOOT, 		// reboot the nodes
+	
+	N_MODES 		// track mode count
+};
+
 // pin definitions common to Moteuinos
 #define LED           9 // Moteinos have LED on D9
 #define FLASH_SS      8 // and FLASH SS on D8
@@ -87,12 +96,16 @@ class Network {
     byte whoAmI();
 
     // for both Node_Light and Node_Location
-    // check for radio traffic; return true if we have an update
+    // check for radio traffic; return true if we have a Message
     boolean update();
     // make the location message available for direct update by Node_Location
     Message msg;
 	// show the contents of the message
 	void printMessage();
+	// set the system state
+	void setState(systemState state);
+	// get the system state
+	systemState getState();
 
     // for Node_Location
     // am I next to transmit distance information?
@@ -111,7 +124,7 @@ class Network {
     word myRange();
     
   private:
-    boolean inStartup;
+    systemState currentState;
 
     byte myNodeID, lastRxNodeID;
     

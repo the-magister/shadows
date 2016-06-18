@@ -41,6 +41,10 @@
 #include <SPI.h>
 #include <SPIFlash.h>      //get it here: https://www.github.com/lowpowerlab/spiflash
 #include <WirelessHEX69.h> //get it here: https://github.com/LowPowerLab/WirelessProgramming/tree/master/WirelessHEX69
+#include <Streaming.h>
+#include <Metro.h>
+#include <EEPROM.h>
+#include <Network.h>
 
 #define NODEID             254  //this node's ID, should be unique among nodes on this NETWORKID
 #define NETWORKID          157  //what network this node is on
@@ -65,6 +69,10 @@ RFM69 radio;
 char c = 0;
 char input[64]; //serial input buffer
 byte targetID=0;
+
+// reboot message
+systemState rebootMessage = M_REBOOT;
+
 
 void setup(){
   Serial.begin(SERIAL_BAUD);
@@ -103,6 +111,7 @@ void loop(){
       Serial.print("TO:");
       Serial.print(newTarget);
       Serial.println(":OK");
+      radio.send(BROADCAST, (const void*)&rebootMessage, sizeof(systemState));
     }
     else
     {
@@ -116,16 +125,16 @@ void loop(){
 
   if (radio.receiveDone())
   {
-    for (byte i = 0; i < radio.DATALEN; i++)
-      Serial.print((char)radio.DATA[i]);
+//    for (byte i = 0; i < radio.DATALEN; i++)
+//      Serial.print((char)radio.DATA[i]);
     
     if (radio.ACK_REQUESTED)
     {
       radio.sendACK();
       Serial.print(" - ACK sent");
+      Serial.println();
     }
     
-    Serial.println();
   }
   Blink(LED,5); //heartbeat
 }

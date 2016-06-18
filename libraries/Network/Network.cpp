@@ -37,6 +37,8 @@ void Network::begin(byte nodeID, byte groupID, byte freq, byte powerLevel) {
 	pinMode(LED, OUTPUT);
 	digitalWrite(LED, LOW);
 
+	this->setState(M_NORMAL); // default to normal operation
+	
 	Serial << F("Network. bitrate(bits/s)=55555.") << endl;
 	
 	// packet contents: http://lowpowerlab.com/blog/2013/06/20/rfm69-library/
@@ -55,19 +57,29 @@ byte Network::whoAmI() {
 }
 
 boolean Network::update() {
+
 	// new traffic?
 	if( radio.receiveDone() ) {   
-//		Serial << F("Network. radio RX") << endl;
 		if( radio.DATALEN==sizeof(Message) ) {
 			// read it
 			this->msg = *(Message*)radio.DATA;  
 			this->lastRxNodeID = radio.SENDERID;
-//			Serial << F("Network. message RX") << endl;
 			return( true );
-		} if( radio.TARGETID == this->myNodeID ) {
-			// and we might be asked to reprogram ourselves by Gateway
+		} else if( radio.TARGETID == this->myNodeID ) {
+			// being asked to reprogram ourselves by Gateway?
 			CheckForWirelessHEX(this->radio, flash);
+		} else if( radio.DATALEN==sizeof(systemState) ) {
+			this->setState( *(systemState*)radio.DATA );
+		} else if( radio.SENDERID==PROGRAMMER_NODE ) {
+			// we need to wait until the airwaves are clear for 5 seconds.
+			Serial << F("Network. Programmer traffic. Waiting...") << endl;
+			delay(50000);
 		}
+	}
+
+	// run the reboot commmand in the update cycle
+	if( this->currentState == M_REBOOT ) {
+		resetUsingWatchdog(true);
 	}
 
 	return( false );
@@ -80,6 +92,14 @@ void Network::printMessage() {
 	Serial << F("\tp 1=") << msg.inter[1] << F("- ") << msg.range[1] << F("|");
 	Serial << F("\tp 2=") << msg.inter[2] << F("- ") << msg.range[2] << F("|");
 	Serial << endl;
+}
+
+void Network::setState(systemState state) {
+	Serial << F("Network. setting systemState=") << state << endl;
+	this->currentState = state;
+}
+systemState Network::getState() {
+	return( this->currentState );
 }
 
 byte Network::isNext(byte node, byte maxNode, byte minNode) {
@@ -102,12 +122,6 @@ boolean Network::meLast() {
 void Network::send() {
 	// put check in to make sure we're not clobbering messages from other transceivers
 	this->update();
-	if( radio.SENDERID == PROGRAMMER_NODE ) {
-		// we need to wait until the airwaves are clear for 5 seconds.
-		Serial << F("Network. Programmer traffic. Waiting...") << endl;
-		delay(30000);
-		Serial << F("Network. All clear.") << endl;
-	}
 
 //	Serial << F("Network. send.") << endl;
 	radio.send(BROADCAST, (const void*)(&this->msg), sizeof(Message));

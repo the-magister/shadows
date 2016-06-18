@@ -49,6 +49,9 @@ void loop() {
 }
 
 void idleUpdate() {
+  // until we get normalized, stay idle
+  if( N.getState() != M_NORMAL ) return;
+  
   // check for state changes
   static Metro goInPlaneTimeout(500UL);
   if( !N.objectInPlane() ) goInPlaneTimeout.reset();
@@ -81,14 +84,14 @@ void inPlaneUpdate() {
   );
 
   // check for state changes
-  static Metro goIdleTimeout(1000UL);
+  static Metro goIdleTimeout(500UL);
   if( N.objectInPlane() ) goIdleTimeout.reset();
   
-  // nothing to see here?
-  if ( goIdleTimeout.check() ) {
+  // nothing to see here or no longer in normal operation?
+  if ( goIdleTimeout.check() || N.getState() != M_NORMAL ) {
     Serial << F("State.  inPlane->idle.") << endl;
     S.transitionTo( idle );
-    A.setAnimation( A_IDLE );
+    A.setAnimation( A_IDLE, false );
   }
 
 }

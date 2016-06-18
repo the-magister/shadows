@@ -133,12 +133,31 @@ void Animation::update() {
 void Animation::aCylon(byte bright) {
   // a colored dot sweeping back and forth, with fading trails
 
+  // two different bpm; one for CW, one for CCW.
+  const byte bpm[]={16,8};
+  static unsigned long tbase = millis();
+  static byte bpmI = 0;
+  const word phase[] = {(65535/4)*3, 65535/4}; // 3/4*PI phase change, so we start at pixel 0
+  
   // fade everything
-  fadeToBlackBy( leds, NUM_LEDS, 10 );
+  fadeToBlackBy( leds, NUM_LEDS, bpm[bpmI] );
 
   // set the speed the pixel travels 
-  byte posVal = beatsin16(13, 0, (word)NUM_LEDS*100)/100; // see: lib8tion.h
+  byte posVal = map(
+    beatsin16(bpm[bpmI], 0, 65535, tbase, phase[bpmI]),
+    0, 65535, 0, NUM_LEDS
+  ); // see: lib8tion.h
 
+  // change bpm?
+  if ( posVal==NUM_LEDS-1 && bpmI==0 && millis() > tbase+500UL ) { 
+      bpmI = 1;
+      tbase = millis();
+  }
+  if ( posVal==0 && bpmI==1 && millis() > tbase+500UL ) { 
+      bpmI = 0;
+      tbase = millis();
+  }
+  
   // cycle through hues, using extent to set value
   static byte hue = 0;
   leds[posVal] = CHSV(hue++, 255, bright );
