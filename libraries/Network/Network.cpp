@@ -72,8 +72,8 @@ boolean Network::update() {
 			this->setState( *(systemState*)radio.DATA );
 		} else if( radio.SENDERID==PROGRAMMER_NODE ) {
 			// we need to wait until the airwaves are clear for 5 seconds.
-			Serial << F("Network. Programmer traffic. Waiting...") << endl;
-			delay(50000);
+			Serial << F("Network. Programmer traffic.") << endl;
+			this->setState( M_PROGRAM );
 		}
 	}
 
@@ -124,8 +124,10 @@ void Network::send() {
 	this->update();
 
 //	Serial << F("Network. send.") << endl;
-	radio.send(BROADCAST, (const void*)(&this->msg), sizeof(Message));
-	this->lastRxNodeID = this->myNodeID;
+	if( this->currentState != M_PROGRAM ) {
+		radio.send(BROADCAST, (const void*)(&this->msg), sizeof(Message));
+		this->lastRxNodeID = this->myNodeID;
+	}
 }
 
 word Network::myDistance() {
