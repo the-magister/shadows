@@ -1,4 +1,7 @@
-HEX_FILE=/tmp/buildf571fb1b4b2b7eadc72666cbdf5170f0.tmp/Node_Location.ino.hex
-python WirelessProgramming.py -f $HEX_FILE -s /dev/ttyUSB0 -t 10
-python WirelessProgramming.py -f $HEX_FILE -s /dev/ttyUSB0 -t 11
-python WirelessProgramming.py -f $HEX_FILE -s /dev/ttyUSB0 -t 12
+HEX_FILE=`ls /tmp/build*/Node_Location.*.hex`
+echo "found $HEX_FILE"
+cp $HEX_FILE Node_Location.hex
+
+python WirelessProgramming.py -f Node_Location.hex -s /dev/ttyUSB0 -t 10
+python WirelessProgramming.py -f Node_Location.hex -s /dev/ttyUSB0 -t 11
+python WirelessProgramming.py -f Node_Location.hex -s /dev/ttyUSB0 -t 12
