@@ -61,10 +61,16 @@ boolean Network::update() {
 	// new traffic?
 	if( radio.receiveDone() ) {   
 		if( radio.DATALEN==sizeof(Message) ) {
-			// read it
-			this->msg = *(Message*)radio.DATA;  
-			this->lastRxNodeID = radio.SENDERID;
-			return( true );
+//			if ( memcmp((void*)(&radio.DATA), (void*)(&this->msg), sizeof(Message)) != 0 ) {
+				// read it
+				this->msg = *(Message*)radio.DATA;  
+//				if( this->lastRxNodeID != radio.SENDERID ) {	
+					this->lastRxNodeID = radio.SENDERID;
+					return( true );
+//				} else {
+//					return( false );
+//				}
+//			}
 		} else if( radio.TARGETID == this->myNodeID ) {
 			// being asked to reprogram ourselves by Gateway?
 			CheckForWirelessHEX(this->radio, flash);
@@ -126,6 +132,11 @@ void Network::send() {
 //	Serial << F("Network. send.") << endl;
 	if( this->currentState != M_PROGRAM ) {
 		radio.send(BROADCAST, (const void*)(&this->msg), sizeof(Message));
+/*		delay(5);
+		radio.send(BROADCAST, (const void*)(&this->msg), sizeof(Message));
+		delay(5);
+		radio.send(BROADCAST, (const void*)(&this->msg), sizeof(Message));
+*/
 		this->lastRxNodeID = this->myNodeID;
 	}
 }

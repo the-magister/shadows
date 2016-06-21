@@ -91,6 +91,12 @@ void Animation::update() {
       case A_INPLANE:
         aProjection( this->currentPosition, this->currentExtent );
          break;
+      case A_CALIBRATE:
+        aSolid( CRGB(0,255,0) );
+         break;
+      case A_PROGRAM:
+        aSolid( CRGB(0,0,255) );
+         break;
     }
 /*    
     nextFrameReady = true;
@@ -200,6 +206,12 @@ void Animation::aProjection(byte center, byte extent) {
 //  for( byte i=0; i<extent; i ++ )
 //    blur1d( leds, NUM_LEDS, 128 );
  
+}
+
+
+void Animation::aSolid(CRGB color) {
+  fadeToBlackBy( leds, NUM_LEDS, 10 );
+  fill_solid(leds, NUM_LEDS, color);
 }
 
 /*

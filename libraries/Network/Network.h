@@ -100,12 +100,12 @@ class Network {
     boolean update();
     // make the location message available for direct update by Node_Location
     Message msg;
-	// show the contents of the message
-	void printMessage();
-	// set the system state
-	void setState(systemState state);
-	// get the system state
-	systemState getState();
+    // show the contents of the message
+    void printMessage();
+    // set the system state
+    void setState(systemState state);
+    // get the system state
+    systemState getState();
 
     // for Node_Location
     // am I next to transmit distance information?

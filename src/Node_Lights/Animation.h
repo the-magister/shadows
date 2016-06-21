@@ -29,6 +29,8 @@ FASTLED_USING_NAMESPACE
 enum animation_t {
   A_IDLE=0,
   A_INPLANE,
+  A_CALIBRATE,
+  A_PROGRAM,
   
   N_ANIMATIONS
 };
@@ -61,6 +63,7 @@ class Animation {
     // animation layer
     void aCylon(byte bright);
     void aProjection(byte pos, byte extent);
+    void aSolid(CRGB color);
 };
 
 extern Animation A;

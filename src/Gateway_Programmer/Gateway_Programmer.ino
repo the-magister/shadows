@@ -82,16 +82,11 @@ void loop() {
       Serial.println("TO?");
     } else {
       // and let the nodes know a programming string is coming
-      radio.send(BROADCAST, (const void*)&messageProgram, sizeof(systemState));
+      sendMessage(messageProgram);
       
       boolean success = CheckForSerialHEX((byte*)input, inputLen, radio, targetID, TIMEOUT, ACK_TIME, false);
-
-      if( success ) {
-        radio.send(BROADCAST, (const void*)&messageReboot, sizeof(systemState));
-        delay(100);
-        // and send again to get clock times sync'd
-        radio.send(BROADCAST, (const void*)&messageReboot, sizeof(systemState));
-      }
+      if( success ) sendMessage(messageReboot);
+      
     }
   } else if (inputLen > 3 && inputLen <= 6 && input[0] == 'T' && input[1] == 'O' && input[2] == ':')  {
     byte newTarget = 0;
@@ -108,7 +103,10 @@ void loop() {
       Serial.print(newTarget);
       Serial.println(":OK");
       // and let the nodes know a programming string is coming
-      radio.send(BROADCAST, (const void*)&messageProgram, sizeof(systemState));
+      for(byte i=0;i<10; i++) {
+        radio.send(BROADCAST, (const void*)&messageProgram, sizeof(systemState));
+        delay(20);
+      }
     } else {
       Serial.print(input);
       Serial.print(":INV");
@@ -116,18 +114,25 @@ void loop() {
   } else if (inputLen == 2 && input[0] == 'S' && input[1] == 'N') {
     sniff = ! sniff;
     Serial << F("Sniffing: ") << sniff << endl;
+  } else if (inputLen == 2 && input[0] == 'C' && input[1] == 'A') {
+    sendMessage(messageCalibrate);   
+    Serial << F("[CA]libration operation Message") << endl;
+    delay(1000);
+    sendMessage(messageNormal);   
+    Serial << F("[NO]ormal operation Message") << endl;
   } else if (inputLen == 2 && input[0] == 'N' && input[1] == 'O') {
-    radio.send(BROADCAST, (const void*)&messageNormal, sizeof(systemState));
+    sendMessage(messageNormal);   
     Serial << F("[NO]ormal operation Message") << endl;
   } else if (inputLen == 2 && input[0] == 'P' && input[1] == 'R') {
-    radio.send(BROADCAST, (const void*)&messageProgram, sizeof(systemState));
+    sendMessage(messageProgram);
     Serial << F("[PR]rogramming operation Message") << endl;
   } else if (inputLen == 2 && input[0] == 'R' && input[1] == 'E') {
-    radio.send(BROADCAST, (const void*)&messageReboot, sizeof(systemState));
+    sendMessage(messageReboot);
     Serial << F("[RE]boot programming Message") << endl;
   } else if (inputLen > 0) { //just echo back and provide instructions
     Serial.print("SERIAL IN > "); Serial.println(input);
     Serial << F("[SN]iff packets (toggles)") << endl;
+    Serial << F("[CA]libration operation Message") << endl;
     Serial << F("[NO]ormal operation Message") << endl;
     Serial << F("[PR]rogramming operation Message") << endl;
     Serial << F("[RE]boot programming Message") << endl;
@@ -142,7 +147,11 @@ void loop() {
     if ( radio.DATALEN == sizeof(Message) ) {
       // read it
       N.msg = *(Message*)radio.DATA;
-      N.printMessage();
+      if( sniff ) { 
+        Serial << radio.SENDERID << F(" > ");
+        N.printMessage();
+        
+      }
     } else {
       for (byte i = 0; i < radio.DATALEN; i++)
         Serial.print((char)radio.DATA[i]);
@@ -160,3 +169,11 @@ void Blink(byte PIN, int DELAY_MS)
   delay(DELAY_MS);
   digitalWrite(PIN, LOW);
 }
+
+void sendMessage(systemState msg) {
+  for(byte i=0;i<10; i++) {
+    radio.send(BROADCAST, (const void*)&msg, sizeof(systemState));
+    delay(5);
+  }  
+}
+

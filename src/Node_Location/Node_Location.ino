@@ -16,9 +16,10 @@
 //#define SPOOF_CIRCLE 0
 
 #define CALIBRATION_INTERVAL 60000UL // calibrate every minute if there's nothing going on
-const word noRange = round(37500.0 * 100.0 / 147.0);
 
-#define RESEND_INTERVAL 100UL
+#define RESEND_INTERVAL 50UL
+
+systemState lastState;
 
 void setup() {
   Serial.begin(115200);
@@ -56,21 +57,18 @@ void loop()
 
     // if it's good to recalibrate (nothing sensed), do so.
     static Metro calibrationInterval(CALIBRATION_INTERVAL);
-    if ( calibrationInterval.check() && N.msg.d[0] == noRange && N.msg.d[1] == noRange && N.msg.d[2] == noRange ) {
+    if ( N.msg.d[0] < IN_PLANE || N.msg.d[1] < IN_PLANE || N.msg.d[2] < IN_PLANE ) {
+      // something was detected
+      calibrationInterval.reset();
+    }
+    if( calibrationInterval.check() || N.getState() == M_CALIBRATE ) {
       L.calibrateDistance();
+      N.setState(M_NORMAL);
     }
-
+    
     // update distance
- //   if ( ! SPOOF_LOCATION && ! SPOOF_CIRCLE )
-      L.readDistance( N.msg );
-/*
-    if ( SPOOF_LOCATION ) {
-      spoofLocation( N.msg );
-    }
-    if ( SPOOF_CIRCLE ) {
-      spoofCircle( N.msg );
-    }
-*/
+    L.readDistance( N.msg );
+
     // calculate positions
     L.calculatePosition( N.msg );
 
@@ -84,13 +82,14 @@ void loop()
   }
 
   // do I need to resend position information?
-  if ( N.meLast() && resendInterval.check() ) {
+  if ( N.meLast() && resendInterval.check() && N.getState() != M_PROGRAM) {
     digitalWrite(LED, HIGH);
     N.send();
     // show
     Serial << F("RESEND: "); N.printMessage();
     digitalWrite(LED, LOW);
-  }
+  }  
+
 }
 /*
 void spoofLocation(Message &msg) {
