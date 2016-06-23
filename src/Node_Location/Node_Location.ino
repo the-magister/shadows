@@ -36,6 +36,14 @@ void setup() {
 
 }
 
+unsigned long elapsedTime() {
+  static unsigned long then = micros();
+  unsigned long now = micros();
+  unsigned long delta = now - then;
+  then = now;
+  return( delta );
+}
+
 void loop()
 {
   static Metro heartBeat(1000UL);
@@ -65,20 +73,46 @@ void loop()
       L.calibrateDistance();
       N.setState(M_NORMAL);
     }
+
+    // how much time is spent by the other nodes?
+    static unsigned long otherTime = 0;
+    otherTime = (9*otherTime + 1*elapsedTime())/10; // running average
     
     // update distance
     L.readDistance( N.msg );
-
+    // how much time is spent reading the sensors?
+    static unsigned long sensorTime = 0;
+    sensorTime = (9*sensorTime + 1*elapsedTime())/10; // running average
+    
     // calculate positions
     L.calculatePosition( N.msg );
+    // how much time is spent by calculating positions?
+    static unsigned long locationTime = 0;
+    locationTime = (9*locationTime + 1*elapsedTime())/10; // running average
 
     // send
     N.send();
-
+    // how much time is spent by sending data?
+    static unsigned long sendTime = 0;
+    sendTime = (9*sendTime + 1*elapsedTime())/10; // running average
+ 
     // show
     Serial << F("TX: "); N.printMessage();
 
     digitalWrite(LED, LOW);
+
+    static byte loopCount = 0;
+    loopCount++;
+    if( loopCount >= 10 ) {
+      loopCount = 0;
+      Serial << F("=== Timers:") << endl;
+      Serial << F("otherTime (us)=") << otherTime << endl;
+      Serial << F("sensorTime (us)=") << sensorTime << endl;
+      Serial << F("locationTime (us)=") << locationTime << endl;
+      Serial << F("sendTime (us)=") << sendTime << endl;
+      Serial << F("SUM (sensor+loc+send)*2 (us)=") << (sensorTime+locationTime+sendTime)*2 << endl;
+      Serial << F("===") << endl;
+    }
   }
 
   // do I need to resend position information?

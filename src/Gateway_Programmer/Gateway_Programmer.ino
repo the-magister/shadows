@@ -150,7 +150,12 @@ void loop() {
       if( sniff ) { 
         Serial << radio.SENDERID << F(" > ");
         N.printMessage();
-        
+        static unsigned long cycleTimer = millis();
+        if( radio.SENDERID == 10 ) {
+          unsigned long cycleTime = millis() - cycleTimer;
+          Serial << F("Cycle time (ms)=") << cycleTime;
+          Serial << F("\tFrequency (Hz)=") << 1.0/((float)cycleTime/1000.0) << endl;
+        }
       }
     } else {
       for (byte i = 0; i < radio.DATALEN; i++)
