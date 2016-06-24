@@ -1,4 +1,4 @@
-HEX_FILE=`ls /tmp/build*/Node_Location.*.hex`
+HEX_FILE=`ls /tmp/build*/Node_Location.ino.hex`
 echo "found $HEX_FILE"
 cp $HEX_FILE Node_Location.hex
 

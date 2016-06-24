@@ -75,7 +75,9 @@ void setup() {
 }
 
 void loop() {
-  byte inputLen = readSerialLine(input, 10, 64, 100); //readSerialLine(char* input, char endOfLineChar=10, byte maxLength=64, uint16_t timeout=1000);
+  byte inputLen = 0;
+  if( Serial.available() > 0 ) 
+    inputLen = readSerialLine(input, 10, 64, 100); //readSerialLine(char* input, char endOfLineChar=10, byte maxLength=64, uint16_t timeout=1000);
 
   if (inputLen == 4 && input[0] == 'F' && input[1] == 'L' && input[2] == 'X' && input[3] == '?') {
     if (targetID == 0) {
@@ -139,28 +141,30 @@ void loop() {
   }
 
   if (radio.receiveDone())  {
-    if (radio.ACK_REQUESTED) {
-      radio.sendACK();
-      Serial << F(" - ACK sent") << endl;
-    }
-
     if ( radio.DATALEN == sizeof(Message) ) {
       // read it
       N.msg = *(Message*)radio.DATA;
       if( sniff ) { 
-        Serial << radio.SENDERID << F(" > ");
-        N.printMessage();
-        static unsigned long cycleTimer = millis();
-        if( radio.SENDERID == 10 ) {
-          unsigned long cycleTime = millis() - cycleTimer;
+//        Serial << radio.SENDERID << F(" > ");
+//        N.printMessage();
+       if( radio.SENDERID == 10 ) {
+          static unsigned long then = millis();
+          unsigned long now = millis();
+          unsigned long cycleTime = now-then;
+          then = now;
           Serial << F("Cycle time (ms)=") << cycleTime;
           Serial << F("\tFrequency (Hz)=") << 1.0/((float)cycleTime/1000.0) << endl;
         }
       }
-    } else {
+    } else if( radio.DATALEN>1 ) {
       for (byte i = 0; i < radio.DATALEN; i++)
         Serial.print((char)radio.DATA[i]);
       Serial << endl;
+    }
+
+    if (radio.ACK_REQUESTED && radio.TARGETID == PROGRAMMER_NODE) {
+      radio.sendACK();
+      Serial << F(" - ACK sent") << endl;
     }
 
     Blink(LED, 5); //heartbeat

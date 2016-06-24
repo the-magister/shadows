@@ -126,10 +126,11 @@ class Network {
   private:
     systemState currentState;
 
-    byte myNodeID, lastRxNodeID;
-    
+    byte myNodeID, lastRxNodeID;    
+
     // radio instance
     RFM69 radio;
+    byte resendInterval;
 
     // helper functions
     byte isNext(byte node, byte maxNode, byte minNode);

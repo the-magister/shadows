@@ -46,8 +46,11 @@ void Network::begin(byte nodeID, byte groupID, byte freq, byte powerLevel) {
 	
 	Serial << F("Network. packet size(bits)=") << packetSizebits << F(" (bytes)=") << packetSizebits/8 << endl;
 	
-	Serial << F("Network. approximate packet transmission time(ms)=") << packetSizebits / 56 + 1 << endl;
+	Serial << F("Network. approximate packet transmission time(ms)=") << (float)packetSizebits / 55.555 << endl;
 	
+	this->resendInterval = (byte)((float)packetSizebits / 55.555 + 1.0)*2;
+	Serial << F("Network. will resend packets every(ms)=") << this->resendInterval << endl;
+
 	Serial << F("Network. startup complete with node number=") << this->myNodeID << endl;
 	
 }
@@ -61,16 +64,14 @@ boolean Network::update() {
 	// new traffic?
 	if( radio.receiveDone() ) {   
 		if( radio.DATALEN==sizeof(Message) ) {
-//			if ( memcmp((void*)(&radio.DATA), (void*)(&this->msg), sizeof(Message)) != 0 ) {
-				// read it
-				this->msg = *(Message*)radio.DATA;  
-//				if( this->lastRxNodeID != radio.SENDERID ) {	
-					this->lastRxNodeID = radio.SENDERID;
-					return( true );
-//				} else {
-//					return( false );
-//				}
-//			}
+			// read it
+			this->msg = *(Message*)radio.DATA;  
+			this->lastRxNodeID = radio.SENDERID;
+			if( radio.TARGETID == this->myNodeID && radio.ACKRequested() ) {
+			      radio.sendACK();
+//			      Serial << this->myNodeID << F(": ACK sent to ") << this->lastRxNodeID << endl;
+			}
+			return( true );
 		} else if( radio.TARGETID == this->myNodeID ) {
 			// being asked to reprogram ourselves by Gateway?
 			CheckForWirelessHEX(this->radio, flash);
@@ -131,12 +132,12 @@ void Network::send() {
 
 //	Serial << F("Network. send.") << endl;
 	if( this->currentState != M_PROGRAM ) {
-		radio.send(BROADCAST, (const void*)(&this->msg), sizeof(Message));
-/*		delay(5);
-		radio.send(BROADCAST, (const void*)(&this->msg), sizeof(Message));
-		delay(5);
-		radio.send(BROADCAST, (const void*)(&this->msg), sizeof(Message));
-*/
+//		radio.send(BROADCAST, (const void*)(&this->msg), sizeof(Message));
+		static byte nextID = isNext(this->myNodeID, 12, 10);
+		while( ! radio.sendWithRetry(nextID, (const void*)(&this->msg), sizeof(Message), 3, this->resendInterval)) {
+			this->update();
+		}
+
 		this->lastRxNodeID = this->myNodeID;
 	}
 }

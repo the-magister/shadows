@@ -17,7 +17,7 @@
 
 #define CALIBRATION_INTERVAL 60000UL // calibrate every minute if there's nothing going on
 
-#define RESEND_INTERVAL 50UL
+#define RESEND_INTERVAL 1000UL
 
 systemState lastState;
 
@@ -46,16 +46,16 @@ unsigned long elapsedTime() {
 
 void loop()
 {
-  static Metro heartBeat(1000UL);
-  if ( heartBeat.check() ) {
-    Serial << F(".");
-  }
+//  static Metro heartBeat(1000UL);
+//  if ( heartBeat.check() ) {
+//    Serial << F(".");
+//  }
 
   // update the radio traffic
-  static Metro resendInterval(RESEND_INTERVAL);
+//  static Metro resendInterval(RESEND_INTERVAL);
   if ( N.update() ) {
     Serial << F("RX: "); N.printMessage();
-    resendInterval.reset();
+//    resendInterval.reset();
 //    Serial << F("meNext?") << N.meNext() << endl;
   }
 
@@ -110,19 +110,22 @@ void loop()
       Serial << F("sensorTime (us)=") << sensorTime << endl;
       Serial << F("locationTime (us)=") << locationTime << endl;
       Serial << F("sendTime (us)=") << sendTime << endl;
-      Serial << F("SUM (sensor+loc+send)*2 (us)=") << (sensorTime+locationTime+sendTime)*2 << endl;
+      Serial << F("SUM (sensor+loc+2*send) (us)=") << (sensorTime+locationTime+2*sendTime) << endl;
       Serial << F("===") << endl;
     }
+
+    // record that we sent something
+//    resendInterval.reset();
   }
 
   // do I need to resend position information?
-  if ( N.meLast() && resendInterval.check() && N.getState() != M_PROGRAM) {
-    digitalWrite(LED, HIGH);
-    N.send();
+//  if ( N.meLast() && resendInterval.check() && N.getState() != M_PROGRAM) {
+//    digitalWrite(LED, HIGH);
+//    N.send();
     // show
-    Serial << F("RESEND: "); N.printMessage();
-    digitalWrite(LED, LOW);
-  }  
+//    Serial << F("RESEND: "); N.printMessage();
+//    digitalWrite(LED, LOW);
+//  }  
 
 }
 /*
