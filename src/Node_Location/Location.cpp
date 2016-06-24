@@ -159,9 +159,9 @@ void Location::calculatePosition(Message &msg) {
   }
 
   // use left and right sensors to determine intercept at base
-  msg.inter[0] = intercept(msg.d[2], msg.d[1]);
-  msg.inter[1] = intercept(msg.d[0], msg.d[2]);
-  msg.inter[2] = intercept(msg.d[1], msg.d[0]);
+  msg.inter[0] = SENSOR_DIST - intercept(msg.d[2], msg.d[1]);
+  msg.inter[1] = SENSOR_DIST - intercept(msg.d[0], msg.d[2]);
+  msg.inter[2] = SENSOR_DIST - intercept(msg.d[1], msg.d[0]);
 
   // use left sensor and intercept to determine height
 //  msg.range[0] = height(msg.d[2], msg.inter[0]);

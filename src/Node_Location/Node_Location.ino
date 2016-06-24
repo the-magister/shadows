@@ -112,8 +112,48 @@ void loop()
       Serial << F("sendTime (us)=") << sendTime << endl;
       Serial << F("SUM (sensor+loc+2*send) (us)=") << (sensorTime+locationTime+2*sendTime) << endl;
       Serial << F("===") << endl;
-    }
 
+      unsigned long ss = (unsigned long)SENSOR_DIST*(unsigned long)SENSOR_DIST;
+      unsigned long s2 = (unsigned long)SENSOR_DIST*2UL;
+      unsigned long aa = (unsigned long)N.msg.d[0]*(unsigned long)N.msg.d[0];
+      unsigned long bb = (unsigned long)N.msg.d[1]*(unsigned long)N.msg.d[1];
+      unsigned long cc = (unsigned long)N.msg.d[2]*(unsigned long)N.msg.d[2];
+      word inter[3] = {
+          (unsigned long)SENSOR_DIST - ((ss+cc)-(bb))/s2,
+          (unsigned long)SENSOR_DIST - ((ss+aa)-(cc))/s2,
+          (unsigned long)SENSOR_DIST - ((ss+bb)-(aa))/s2
+      };
+      Serial << F("=== intercept calc:") << endl;
+      Serial << F("inter[0]= ") << N.msg.inter[0] << F("\t") << inter[0] << endl;
+      Serial << F("inter[1]= ") << N.msg.inter[1] << F("\t") << inter[1] << endl;
+      Serial << F("inter[2]= ") << N.msg.inter[2] << F("\t") << inter[2] << endl;
+      Serial << F("===") << endl;
+
+     
+//      inter[0] = SENSOR_DIST - inter[0];
+//      inter[1] = SENSOR_DIST - inter[1];
+//      inter[2] = SENSOR_DIST - inter[2];
+      unsigned long dd[3] = { 
+        (unsigned long)inter[0]*(unsigned long)inter[0],
+        (unsigned long)inter[1]*(unsigned long)inter[1],
+        (unsigned long)inter[2]*(unsigned long)inter[2],
+      };
+      word height[3] = {
+        bb>dd[1] ? L.SquareRootRounded(bb-dd[1]) : 0,
+        cc>dd[2] ? L.SquareRootRounded(cc-dd[2]) : 0,
+        aa>dd[3] ? L.SquareRootRounded(aa-dd[3]) : 0
+      };
+      
+      Serial << F("=== height calc:") << endl;
+      Serial << F("height[0]= ") << N.msg.range[0] << F("\t") << height[0] << endl;
+      Serial << F("height[1]= ") << N.msg.range[1] << F("\t") << height[1] << endl;
+      Serial << F("height[2]= ") << N.msg.range[2] << F("\t") << height[2] << endl;
+      
+      Serial << F("height= ") << HEIGHT_LEN << F("\tsum msg.height= ") << N.msg.range[0]+N.msg.range[1]+N.msg.range[2];
+      Serial << F("\tsum calc= ") << height[0]+height[1]+height[2] << endl;
+      Serial << F("===") << endl;
+
+    }
     // record that we sent something
 //    resendInterval.reset();
   }

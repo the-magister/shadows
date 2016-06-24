@@ -90,7 +90,7 @@ void inPlaneUpdate() {
   A.setCenter(
     map(
       constrain(N.myIntercept(), 0, SENSOR_DIST),  // constrain x to be [0, BASE_LEN]
-      SENSOR_DIST, 0, // map [BASE_LEN, 0]
+      0, SENSOR_DIST, // map [0, SENSOR_DIST]
       0, NUM_LEDS - 1 // to [0, NUM_LEDS-1]
     )
   );
