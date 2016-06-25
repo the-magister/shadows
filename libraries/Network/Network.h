@@ -26,6 +26,24 @@ typedef struct {
   word range[3];  // projected distnace lights; pull by y[this->myNodeID-20]
 } Message;
 
+/*
+could refactor the message to be 32 bits:
+	0-9   = d[1]
+	10-19 = d[2]
+	20-29 = d[3]
+	30-31 = enum { OOR_3, OOR_2, OOR_1, OK } indicating sensor ranging outcome
+
+that would turn the message size from 2*3*3=18 bytes to 4*1=4 bytes, which
+would cut the transmission time from ~4ms to ~2ms.  With the ACK, that's ~8ms to ~4ms,
+which is significant in the context of a ~10ms ranging activity.  
+
+with 10 bits of information, values up to 1023 are possible.  the maximum
+sensor reading is ~65 inches, so we could transmit decainches (~650 din)
+comfortably.  Importantly, we can use word storage for the decainch data, and cubic 
+operations would still fit in unsigned long (32 bits).
+*/
+
+
 enum systemState {
 	M_CALIBRATE=0,	// calibration of sensors
 	M_NORMAL,		// normal operation
