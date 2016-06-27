@@ -6,25 +6,77 @@
 #include <Metro.h>
 #include <Streaming.h>
 
-#include <RFM69.h> // RFM69HW radio transmitter module
-#include <SPI.h> // for radio board 
+// radio
+#include <RFM69.h> 
+#include <SPI.h> 
+// wireless programming
 #include <SPIFlash.h>
 #include <avr/wdt.h>
 #include <WirelessHEX69.h>
+// for storage of node information
+#include <EEPROM.h> 
 
-#include <EEPROM.h> // for storage of node information
+// comms settings and information
 
-#define BROADCAST 0  // all nodes will hear this
-#define GROUPID 157  // local group
-#define POWERLEVEL 31 // 0-31, 31 being maximal
+#define BROADCAST			 0  // all nodes will hear this
+#define GROUPID				157  // local group
+#define POWERLEVEL			31 // 0-31, 31 being maximal
 
-#define PROGRAMMER_NODE 254 // detecting traffic from this node should tell everyone to STFU already
+#define PROGRAMMER_NODE		254 // detecting traffic from this node should tell everyone to STFU already
 
-typedef struct {
-  word d[3];      // distance relative to sensors; pull by d[this->myNodeID-10]
-  word inter[3];  // projected intersection on lights; pull by x[this->myNodeID-20]
-  word range[3];  // projected distnace lights; pull by y[this->myNodeID-20]
-} Message;
+// system state messages
+enum systemState {
+	M_CALIBRATE=0,	// calibration of sensors
+	M_NORMAL,		// normal operation
+	M_PROGRAM,		// OTA programming
+	M_REBOOT, 		// reboot the nodes
+	
+	N_MODES 		// track mode count
+};
+
+// pin definitions common to Moteuinos
+#define LED			9 // Moteinos have LED on D9
+#define FLASH_SS	8 // and FLASH SS on D8
+#define FLASH_ID	0xEF30 // EF30 for windbond 4mbit flash
+
+// geometry of the755755 devices
+#define SL			755U // sensor-sensor distance; i.e. side length
+#define HL			655U // sensor-LED distance; i.e. altitude
+#define IN_PLANE	625U // sensor-LED distance threshold for "detected something"
+#define LL			720U // LED strip length; 
+
+// useful constants
+#define SL2			755UL*755UL // squared side length
+#define twoSL		2UL*755UL   // two times size length
+
+/*
+Physical layout:
+
+		 20
+   12 -------- 11
+	 \		/
+	  \	  / 
+	21 \	/ 22
+		\  /
+		 10
+
+Tens digit:
+  1 = nodes with ultrasound rangefinders (Node_Location)
+  2 = nodes with RGB LED strips (Node_Light)
+  
+Ones digit (with same tens digit):
+  +1 (modulo) = "to my right"/next
+  -1 (modulo) = "to my left"/previous
+  
+Ultrasound ring goes counter-clockwise round-robin:
+
+  Rx From   Is Next
+  10		11
+  11		12
+  12		10
+  
+*/ 
+
 
 /*
 could refactor the message to be 32 bits:
@@ -44,115 +96,57 @@ operations would still fit in unsigned long (32 bits).
 */
 
 
-enum systemState {
-	M_CALIBRATE=0,	// calibration of sensors
-	M_NORMAL,		// normal operation
-	M_PROGRAM,		// OTA programming
-	M_REBOOT, 		// reboot the nodes
-	
-	N_MODES 		// track mode count
-};
-
-// pin definitions common to Moteuinos
-#define LED           9 // Moteinos have LED on D9
-#define FLASH_SS      8 // and FLASH SS on D8
-#define FLASH_ID      0xEF30 // EF30 for windbond 4mbit flash
-
-// geometry of the devices
-#define BASE_LEN      7200U // length of LED strips (centainches)
-#define HALF_BASE     3600U // halfway along the LED strip (centainches)
-
-#define SENSOR_DIST   7550U // distance between sensors
-
-//#define HEIGHT_LEN    6235U // height of the sensor over the LEDs (centainches)
-#define HEIGHT_LEN    6550U // height of the sensor over the LEDs (centainches)
-
-#define IN_CORNER     1200U   // any sensor distance closer than this indicates the object is cornered.
-#define IN_PLANE      HEIGHT_LEN-1000U    // any sensor distance less than this indicates an object in plane
-
-// range definitions
-#define D_OFFLINE     65535U  // one or more sensors haven't reported in
-#define D_ERROR       65534U  // distance information is in error
-
-// position definition
-#define P_OFFLINE     65535U  // one or more sensors haven't reported in
-#define P_ERROR       65534U  // distance information can't be used to triangulate locations
-
-/*
-Physical layout:
-
-         20
-   12 -------- 11
-     \        /
-      \      / 
-    21 \    / 22
-        \  /
-         10
-
-Tens digit:
-  1 = nodes with ultrasound rangefinders (Node_Location)
-  2 = nodes with RGB LED strips (Node_Light)
-  
-Ones digit (with same tens digit):
-  +1 (modulo) = "to my right"/next
-  -1 (modulo) = "to my left"/previous
-  
-Ultrasound ring goes counter-clockwise round-robin:
-
-  Rx From   Is Next
-  10        11
-  11        12
-  12        10
-  
-*/ 
-
 class Network {
   public:
-    // initialize radio
-    void begin(byte nodeID=255, byte groupID=GROUPID, byte freq=RF69_915MHZ, byte powerLevel=POWERLEVEL);
-    // return my node ID
-    byte whoAmI();
+	// initialize radio
+	void begin(byte nodeID=255, byte groupID=GROUPID, byte freq=RF69_915MHZ, byte powerLevel=POWERLEVEL);
+	// return my node ID
+	byte myNodeID;
+	// indexing information; left, me, right
+	byte lI, mI, rI;
+	// or, a more general form
+	byte right(byte i);
+	byte left(byte i);
 
-    // for both Node_Light and Node_Location
-    // check for radio traffic; return true if we have a Message
-    boolean update();
-    // make the location message available for direct update by Node_Location
-    Message msg;
-    // show the contents of the message
-    void printMessage();
-    // set the system state
-    void setState(systemState state);
-    // get the system state
-    systemState getState();
+	// for both Node_Light and Node_Location
+	// check for radio traffic; return sender's node ID if we have a Message
+	byte update();
+	unsigned long message;
 
-    // for Node_Location
-    // am I next to transmit distance information?
-    boolean meNext();
-	// was I the last to transmit distance information?
-	boolean meLast();
-    // send location information encoded in msg
-    void send();
+	// show the contents of the message information
+	void showMessage();
+	
+	// system state
+	systemState state;
 
-    // for Node_Lights
-    // is there an object in the plane?
-    boolean objectInPlane();
-    // return the positional information, relative to me
-	word myDistance();
-    word myIntercept();
-    word myRange();
-    
+	// for Node_Location
+	void encodeMessage(word distance);
+	// send location information encoded in msg
+	void send();
+
+	// for Node_Lights
+	void decodeMessage();
+	// which sets the following target information
+	byte s; // 2 MSBs in message
+	word distance[3]; // distance from sensor to object
+	word Ab[3], Ah[3]; // object location relative to LEDs, altitude basis
+	word mCb, mCh; // object location relative to this LED, collinear basis
+	word mArea; // relative area of the triangle defined by the object and this LED, relative to total area.
+	
+	// all of this is conducted over radio
+	RFM69 radio;
+	
   private:
-    systemState currentState;
 
-    byte myNodeID, lastRxNodeID;    
+	// helper functions
+	unsigned long squared(word x);
+	word squareRoot(unsigned long x);
 
-    // radio instance
-    RFM69 radio;
-    byte resendInterval;
-
-    // helper functions
-    byte isNext(byte node, byte maxNode, byte minNode);
-    byte isPrev(byte node, byte maxNode, byte minNode);
+	word altitudeBase(byte i);
+	word altitudeHeight(byte i);
+	word collinearBase(byte i);
+	word collinearHeight(byte i);
+	word area(byte i);
 };
 
 extern Network N;

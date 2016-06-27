@@ -42,21 +42,32 @@ void setup() {
 
 }
 
+boolean objectInPlane() {
+  return(
+    N.distance[0] <= IN_PLANE || N.distance[1] <= IN_PLANE || N.distance[2] <= IN_PLANE
+  );
+}
+
 void loop() {
   // update the radio traffic
-  if ( N.update() ) N.printMessage();
+  byte fromNode = N.update();
+  if( fromNode > 0 ) {
+    Serial << F("RX: ") << fromNode << F(" ");
+    N.showMessage();
+    N.decodeMessage(); // translate distances to altitude and intercept information
+  }
 
   // check for system mode changes
-  if ( N.getState() != lastState ) {
-    if ( N.getState() == M_CALIBRATE ) {
+  if ( N.state != lastState ) {
+    if ( N.state == M_CALIBRATE ) {
       A.setAnimation(A_CALIBRATE, false);
-    } else if ( N.getState() == M_PROGRAM ) {
+    } else if ( N.state == M_PROGRAM ) {
       A.setAnimation(A_PROGRAM, false);
-    } else if ( N.getState() == M_NORMAL ) {
+    } else if ( N.state == M_NORMAL ) {
       S.transitionTo( idle );
       A.setAnimation( A_IDLE, false );
     }
-    lastState = N.getState();
+    lastState = N.state;
   }
   
   // update the FSM, letting it set animations as needed.
@@ -68,11 +79,11 @@ void loop() {
 
 void idleUpdate() {
   // until we get normalized, stay idle
-  if ( N.getState() != M_NORMAL ) return;
+  if ( N.state != M_NORMAL ) return;
 
   // check for state changes
   static Metro goInPlaneTimeout(500UL);
-  if ( !N.objectInPlane() ) goInPlaneTimeout.reset();
+  if ( objectInPlane ) goInPlaneTimeout.reset();
 
   // do we detect something out there?
   if ( goInPlaneTimeout.check() ) {
@@ -84,13 +95,13 @@ void idleUpdate() {
 
 void inPlaneUpdate() {
   // until we get normalized, stay idle
-  if ( N.getState() != M_NORMAL ) return;
+  if ( N.state != M_NORMAL ) return;
 
   // drive shadow center according to intercept
   A.setCenter(
     map(
-      constrain(N.myIntercept(), 0, SENSOR_DIST),  // constrain x to be [0, BASE_LEN]
-      0, SENSOR_DIST, // map [0, SENSOR_DIST]
+      constrain(N.mCb, 0, SL),  // constrain x to be [0, SL]
+      0, SL, // map [0, SENSOR_DIST]
       0, NUM_LEDS - 1 // to [0, NUM_LEDS-1]
     )
   );
@@ -98,18 +109,18 @@ void inPlaneUpdate() {
   // drive shadow extent according to range
   A.setExtent(
     map(
-      constrain(N.myRange(), 0, HEIGHT_LEN),
-      0, HEIGHT_LEN, // map [0, HEIGHT_LEN]
+      constrain(N.mCh, 0, HL),
+      0, HL, // map [0, HEIGHT_LEN]
       0, NUM_LEDS / 2 // to [0, NUM_LEDS/2]
     )
   );
 
   // check for state changes
   static Metro goIdleTimeout(500UL);
-  if ( N.objectInPlane() ) goIdleTimeout.reset();
+  if ( objectInPlane() ) goIdleTimeout.reset();
 
   // nothing to see here or no longer in normal operation?
-  if ( goIdleTimeout.check() || N.getState() != M_NORMAL ) {
+  if ( goIdleTimeout.check() || N.state != M_NORMAL ) {
     Serial << F("State.  inPlane->idle.") << endl;
     S.transitionTo( idle );
     A.setAnimation( A_IDLE, false );
