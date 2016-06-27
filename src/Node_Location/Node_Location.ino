@@ -17,6 +17,7 @@
 #define RESEND_INTERVAL 1000UL
 
 systemState lastState;
+word distanceToLEDs = SL;
 
 void setup() {
   Serial.begin(115200);
@@ -69,7 +70,9 @@ void loop() {
     otherTime = (9*otherTime + 1*elapsedTime())/10; // running average
     
     // update distance
-    N.encodeMessage( D.read() );
+    word dist = D.read();
+    N.encodeMessage( map(dist, 0, distanceToLEDs, 0, HL) ); // scale to correct for warp
+    
     // how much time is spent reading the sensors?
     static unsigned long sensorTime = 0;
     sensorTime = (9*sensorTime + 1*elapsedTime())/10; // running average
@@ -86,6 +89,10 @@ void loop() {
 
     digitalWrite(LED, LOW);
 
+    if( dist > IN_PLANE ) {
+      distanceToLEDs = (49*distanceToLEDs + 1*dist)/50; // running average
+    }
+    
     static byte loopCount = 0;
     loopCount++;
     if( loopCount >= 10 ) {

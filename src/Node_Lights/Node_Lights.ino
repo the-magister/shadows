@@ -101,7 +101,7 @@ void inPlaneUpdate() {
   A.setCenter(
     map(
       constrain(N.mCb, 0, SL),  // constrain x to be [0, SL]
-      0, SL, // map [0, SENSOR_DIST]
+      0, SL, // map [0, SL]
       0, NUM_LEDS - 1 // to [0, NUM_LEDS-1]
     )
   );
@@ -110,7 +110,7 @@ void inPlaneUpdate() {
   A.setExtent(
     map(
       constrain(N.mCh, 0, HL),
-      0, HL, // map [0, HEIGHT_LEN]
+      0, HL, // map [0, HL]
       0, NUM_LEDS / 2 // to [0, NUM_LEDS/2]
     )
   );

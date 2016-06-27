@@ -39,7 +39,7 @@ enum systemState {
 #define FLASH_SS	8 // and FLASH SS on D8
 #define FLASH_ID	0xEF30 // EF30 for windbond 4mbit flash
 
-// geometry of the755755 devices
+// geometry of the devices
 #define SL			755U // sensor-sensor distance; i.e. side length
 #define HL			655U // sensor-LED distance; i.e. altitude
 #define IN_PLANE	625U // sensor-LED distance threshold for "detected something"
@@ -51,14 +51,14 @@ enum systemState {
 
 /*
 Physical layout:
-
-		 20
-   12 -------- 11
-	 \		/
-	  \	  / 
-	21 \	/ 22
-		\  /
-		 10
+    ---- SL --->
+         20
+   12 -------- 11   ^
+     \        /     |
+      \      /      HL
+    21 \    / 22    |
+        \  /        |
+         10         |
 
 Tens digit:
   1 = nodes with ultrasound rangefinders (Node_Location)
