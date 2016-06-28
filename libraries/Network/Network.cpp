@@ -79,22 +79,16 @@ byte Network::update() {
 }
 
 
-byte Network::left(byte i) {
-	// get the tens digit
-	byte tens = i - (i % 10); 
-	// get the ones digit
-	byte ones = i - tens;
-	
-	return( tens + ones<2 ? ones+1 : 0 );
-}
+void Network::send() {
+	// put check in to make sure we're not clobbering messages from other transceivers
+	this->update();
 
-byte Network::right(byte i) {
-	// get the tens digit
-	byte tens = i - (i % 10); 
-	// get the ones digit
-	byte ones = i - tens;
-	
-	return( tens + ones>0 ? ones-1 : 2 );
+	if( this->state != M_PROGRAM ) {
+		static byte nextID = lI+20;
+		while( ! radio.sendWithRetry(this->lI, (const void*)(&this->message), sizeof(this->message), 3, 10)) {
+			this->update();
+		}
+	}
 }
 
 void Network::showMessage() {
@@ -127,12 +121,17 @@ void Network::decodeMessage() {
 	this->distance[2] = (this->message >> 20) << 6 >> 6; // dumping six MSB
 	this->s = (this->message >> 30);
 
-	// altitude base
+	// the distance measures to the right and left of the LED strips and
+	// the known distance between the sensors form a triangle.
+
+	// altitude base.  the distance of the triangle's altitude along the side length.
 	Ab[lI] = altitudeBase(lI);
 	Ab[mI] = altitudeBase(mI);
 	Ab[rI] = altitudeBase(rI);
 	
-	// altitude height
+	// altitude height.  the extent of the triangle's altitude.
+	// these are the trilinear coordinates of the object.
+	// https://en.wikipedia.org/wiki/Trilinear_coordinates
 	Ah[lI] = altitudeHeight(lI);
 	Ah[mI] = altitudeHeight(mI);
 	Ah[rI] = altitudeHeight(rI);
@@ -142,17 +141,82 @@ void Network::decodeMessage() {
 	Ah[lI] = Ah[lI]==0 ? deltaAh : Ah[lI];
 	Ah[mI] = Ah[mI]==0 ? deltaAh : Ah[mI];
 	Ah[rI] = Ah[rI]==0 ? deltaAh : Ah[rI];
+
+	// from here, we want to know the location on the side length that is
+	// collinear with the opposite sensor and the object. that is, a 
+	// cevian from the opposite vertex that passes through the object.
+	// https://en.wikipedia.org/wiki/Cevian
 	
-	// collinear base
+	// collinear base. the distance of the collinear point along the side length.
 	mCb = collinearBase(mI);
 	
-	// collinear height
+	// collinear height. the distance between the collinear point and the object.
 	mCh = collinearHeight(mI);
 	
-	// fractional area
+	// fractional area. this is the barycentric coordinate relative to the opposite vertex.
 	mArea = area(mI);
 	
 }
+
+// given two distances and a known side length, we can calculate the 
+// the altitude's distance along the side length of the altitude.
+// from https://en.wikipedia.org/wiki/Heron%27s_formula#Algebraic_proof_using_the_Pythagorean_theorem
+word Network::altitudeBase(byte i) {
+	// use right-i and left-i distances
+	return(
+		((SL2+squared(distance[left(i)]))-squared(distance[right(i)])) / twoSL
+	);
+}
+
+// given the altitude's distance along the side length and the distance,
+// use Pythagorean's theorem to calculte the altitude 
+word Network::altitudeHeight(byte i) {
+	// use right-i distance and i altitude base
+	if( Ab[i] > distance[right(i)] ) return( 0 );
+	return( 
+		squareRoot( squared(distance[right(i)]) - squared(Ab[i]) ) 
+	);
+}
+
+// given the left and right altitudes to the object, we leverage these
+// trilinear coordinates to express the colinear point's location
+// on the side length. trilinear coordinates, in particular, enable an 
+// algebraic solution involving determinants. otherwise, we'd require
+// calculations of angles.
+// https://en.wikipedia.org/wiki/Trilinear_coordinates#Collinearities_and_concurrencies
+word Network::collinearBase(byte i) {
+	// use left-i altitude height and right-i altitude height
+	return(
+		((unsigned long)Ah[left(i)]*SL)/((unsigned long)Ah[left(i)]+(unsigned long)Ah[right(i)])
+	);
+}
+
+// given the extent of the altitude and the difference beween the collinear 
+// base intercept and the altitude's base intercept, we can use 
+// Pythagorean's theorem to compute the length of the collinear line. 
+word Network::collinearHeight(byte i) {
+	if( i!=mI ) { Serial << F("need to implement Cb[3] to proceed.") << endl; while(1) update(); }
+	// use i altitude height and base; i collinear base
+	return( mCb >= Ab[i] ? // unsigned, so careful of order
+		squareRoot( squared(Ah[i]) + squared(mCb-Ab[i]) ) :
+		squareRoot( squared(Ah[i]) + squared(Ab[i]-mCb) )
+	);
+}
+
+// finally, we can convert the trilinear coordinates to barycentric coordinates,
+// which immediately gives us the FRACTION of the total triangle area
+// occupied by the triangle above this LED segment.
+// interpret the return of this function to be 65534ths 
+// https://en.wikipedia.org/wiki/Barycentric_coordinate_system
+word Network::area(byte i) {
+	// use i altitude height
+	// multiply the ratio of Ah[i]/sum(Ah[]) by the maximum word value to
+	// generate a 16-bit fractional result.
+	return(
+		((unsigned long)((word)(-1))*(unsigned long)Ah[i]) / (unsigned long)SL
+	);
+}
+
 
 unsigned long Network::squared(word x) {
 	// taking care to promote operand 
@@ -193,54 +257,22 @@ word Network::squareRoot(unsigned long x) {
     return (word)res;
 }
 
-
-word Network::altitudeBase(byte i) {
-	// use right-i and left-i distances
-	return(
-		((SL2+squared(distance[left(i)]))-squared(distance[right(i)])) / twoSL
-	);
-}
-word Network::altitudeHeight(byte i) {
-	// use right-i distance and i altitude base
-	if( Ab[i] > distance[right(i)] ) return( 0 );
-	return( 
-		squareRoot( squared(distance[right(i)]) - squared(Ab[i]) ) 
-	);
-}
-word Network::collinearBase(byte i) {
-	// use left-i altitude height and right-i altitude height
-	return(
-		((unsigned long)Ah[left(i)]*SL)/((unsigned long)Ah[left(i)]+(unsigned long)Ah[right(i)])
-	);
-}
-word Network::collinearHeight(byte i) {
-	if( i!=mI ) { Serial << F("need to implement Cb[3] to proceed.") << endl; while(1) update(); }
-	// use i altitude height and base; i collinear base
-	return( mCb >= Ab[i] ? // unsigned, so careful of order
-		squareRoot( squared(Ah[i]) + squared(mCb-Ab[i]) ) :
-		squareRoot( squared(Ah[i]) + squared(Ab[i]-mCb) )
-	);
-}
-// use FastLED/lib8tion.h lerp16by16() to scale this fraction to integer
-word Network::area(byte i) {
-	// use i altitude height
-	// multiply the ratio of Ah[i]/sum(Ah[]) by the maximum word value to
-	// generate a 16-bit fractional result.
-	return(
-		((unsigned long)((word)(-1))*(unsigned long)Ah[i]) / (unsigned long)SL
-	);
+byte Network::left(byte i) {
+	// get the tens digit
+	byte tens = i - (i % 10); 
+	// get the ones digit
+	byte ones = i - tens;
+	
+	return( tens + ones<2 ? ones+1 : 0 );
 }
 
-void Network::send() {
-	// put check in to make sure we're not clobbering messages from other transceivers
-	this->update();
-
-	if( this->state != M_PROGRAM ) {
-		static byte nextID = lI+20;
-		while( ! radio.sendWithRetry(this->lI, (const void*)(&this->message), sizeof(this->message), 3, 10)) {
-			this->update();
-		}
-	}
+byte Network::right(byte i) {
+	// get the tens digit
+	byte tens = i - (i % 10); 
+	// get the ones digit
+	byte ones = i - tens;
+	
+	return( tens + ones>0 ? ones-1 : 2 );
 }
 
 Network N;

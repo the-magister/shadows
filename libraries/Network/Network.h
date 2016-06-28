@@ -79,7 +79,7 @@ Ultrasound ring goes counter-clockwise round-robin:
 
 
 /*
-could refactor the message to be 32 bits:
+message is 32 bits:
 	0-9   = d[1]
 	10-19 = d[2]
 	20-29 = d[3]
@@ -95,6 +95,14 @@ comfortably.  Importantly, we can use word storage for the decainch data, and cu
 operations would still fit in unsigned long (32 bits).
 */
 
+// NOTE: I specifically skipped getter/setter functions to 
+// strip the memory usage down to be as small as possible.
+// Stylistically, this is ugly, and it does exposure private 
+// components to unintended alteration.  However, both the 
+// sensor and lighting nodes use this code so I want a very
+// small memory footprint. I did use some bytes for indexing
+// variables, as I felt that the readibility of the code
+// was greatly improved, so this is a compromise position.
 
 class Network {
   public:
