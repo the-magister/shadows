@@ -7,10 +7,9 @@
 #include <avr/wdt.h>
 #include <WirelessHEX69.h>
 #include <EEPROM.h>
-
+// Shadows specific libraries.  
 #include <Network.h>
-
-#include "Distance.h"
+#include <Distance.h>
 
 #define CALIBRATION_INTERVAL 60000UL // calibrate every minute if there's nothing going on
 
@@ -71,7 +70,8 @@ void loop() {
     
     // update distance
     word dist = D.read();
-    N.encodeMessage( map(dist, 0, distanceToLEDs, 0, HL) ); // scale to correct for warp
+    N.distance[N.mI] = map(dist, 0, distanceToLEDs, 0, HL); // scale to correct for warp
+    N.encodeMessage(); 
     
     // how much time is spent reading the sensors?
     static unsigned long sensorTime = 0;

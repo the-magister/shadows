@@ -5,8 +5,6 @@
 
 #include <Streaming.h>
 
-#include <Network.h>
-
 // Moteuino R4 pins already in use:
 //  D2, D10-13 - transceiver
 //  D9         - LED

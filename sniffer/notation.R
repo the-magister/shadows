@@ -7,11 +7,11 @@ require(reshape2)
 
 
 # these need to match Network.h definitions
-BASE_LEN = 7200 # length of LED strips (centainches)
-HALF_BASE = 3600 # halfway along the LED strip (centainches)
-SENSOR_DIST = 7550  # distance between sensors
-HEIGHT_LEN  = 6550 # height of the sensor over the LEDs (centainches)
-IN_CORNER = 1200 # any sensor distance closer than this indicates the object is 
+BASE_LEN = 720 # length of LED strips (centainches)
+HALF_BASE = 360 # halfway along the LED strip (centainches)
+SENSOR_DIST = 755  # distance between sensors
+HEIGHT_LEN  = 655 # height of the sensor over the LEDs (centainches)
+IN_CORNER = 120 # any sensor distance closer than this indicates the object is 
 
 # thetas
 to.rad = function(theta) { theta*pi/180 }
@@ -43,7 +43,7 @@ base.plot = ggplot() +
 	geom_point(data=vertices, size=5, aes(x=x0,y=y0), shape=17) +
 	coord_equal() +
 	scale_color_colorblind() +
-	labs(x="Horizontal, in*100",y="Vertical, in*100", color="Object")
+	labs(x="Horizontal, in*10",y="Vertical, in*10", color="Object")
 #print(base.plot)
 
 random.target = function() {
@@ -125,11 +125,11 @@ altitudeHeight = function(locDist) {
 	c(
 		# note: we return actual distances (a',b',c') not x:y:z
 		# a'
-		floor(ifelse(bb>dd[1], sqrt(bb-dd[1]), 0)),
+		round(ifelse(bb>dd[1], sqrt(bb-dd[1]), 0)),
 		# b' 
-		floor(ifelse(cc>dd[2], sqrt(cc-dd[2]), 0)),
+		round(ifelse(cc>dd[2], sqrt(cc-dd[2]), 0)),
 		# c'
-		floor(ifelse(aa>dd[3], sqrt(aa-dd[3]), 0))
+		round(ifelse(aa>dd[3], sqrt(aa-dd[3]), 0))
 	)
 }
 ah=altitudeHeight(locDist)
@@ -178,11 +178,11 @@ soln.plot = soln.plot +
 collinearBase = function(ah) {
 	c(
 		# α'
-		round( (ah[3]*SENSOR_DIST)/(ah[3]+ah[2]) ),
+		floor( (ah[3]*SENSOR_DIST)/(ah[3]+ah[2]) ),
 		# ß'
-		round( (ah[1]*SENSOR_DIST)/(ah[1]+ah[3]) ),
+		floor( (ah[1]*SENSOR_DIST)/(ah[1]+ah[3]) ),
 		# Γ'
-		round( (ah[2]*SENSOR_DIST)/(ah[2]+ah[1]) )
+		floor( (ah[2]*SENSOR_DIST)/(ah[2]+ah[1]) )
 	)
 }
 cb=collinearBase(ah)

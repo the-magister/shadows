@@ -3,7 +3,6 @@
 
 #include <Arduino.h>
 
-#include <Metro.h>
 #include <Streaming.h>
 
 // radio
@@ -39,15 +38,15 @@ enum systemState {
 #define FLASH_SS	8 // and FLASH SS on D8
 #define FLASH_ID	0xEF30 // EF30 for windbond 4mbit flash
 
-// geometry of the devices
+// geometry of the devices, 16-bit
 #define SL			755U // sensor-sensor distance; i.e. side length
 #define HL			655U // sensor-LED distance; i.e. altitude
 #define IN_PLANE	625U // sensor-LED distance threshold for "detected something"
 #define LL			720U // LED strip length; 
 
-// useful constants
-#define SL2			755UL*755UL // squared side length
-#define twoSL		2UL*755UL   // two times size length
+// useful constants, 32 bit
+#define SL2			(755UL*755UL) // squared side length
+#define twoSL		(2UL*755UL)   // two times size length
 
 /*
 Physical layout:
@@ -128,14 +127,14 @@ class Network {
 	systemState state;
 
 	// for Node_Location
-	void encodeMessage(word distance);
+	void encodeMessage();
 	// send location information encoded in msg
 	void send();
 
 	// for Node_Lights
 	void decodeMessage();
 	// which sets the following target information
-	byte s; // 2 MSBs in message
+	byte s; // 2 bits in message
 	word distance[3]; // distance from sensor to object
 	word Ab[3], Ah[3]; // object location relative to LEDs, altitude basis
 	word mCb, mCh; // object location relative to this LED, collinear basis

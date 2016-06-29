@@ -100,47 +100,51 @@ void Network::showMessage() {
 	Serial << endl;
 }
 
-void Network::encodeMessage(word distance) {
-	this->distance[mI] = distance;
+void Network::encodeMessage() {
 
-	this->message = s;
+	this->message = 0;
 	
+	this->message |= this->distance[2] & 1023UL;
 	this->message = this->message << 10;
-	this->message |= this->distance[2];
+//	Serial.println(this->message, BIN);
 	
+	this->message |= this->distance[1] & 1023UL;
 	this->message = this->message << 10;
-	this->message |= this->distance[1];
+//	Serial.println(this->message, BIN);
 	
-	this->message = this->message << 10;
-	this->message |= this->distance[0];
+	this->message |= this->distance[0] & 1023UL;
+	this->message = this->message << 2;
+//	Serial.println(this->message, BIN);
+
+	this->message |= this->s & 3UL;
+//	Serial.println(this->message, BIN);
+	
 }
 
 void Network::decodeMessage() {
-	this->distance[0] = (this->message >>  0) << 6 >> 6; // dumping six MSB
-	this->distance[1] = (this->message >> 10) << 6 >> 6; // dumping six MSB
-	this->distance[2] = (this->message >> 20) << 6 >> 6; // dumping six MSB
-	this->s = (this->message >> 30);
+	this->s = this->message & 3UL; // dumping 30 MSB
+	this->distance[0] = (this->message >>  2) & 1023UL; // dumping six MSB
+	this->distance[1] = (this->message >> 12) & 1023UL; // dumping six MSB
+	this->distance[2] = (this->message >> 22) & 1023UL; // dumping six MSB
 
 	// the distance measures to the right and left of the LED strips and
 	// the known distance between the sensors form a triangle.
 
 	// altitude base.  the distance of the triangle's altitude along the side length.
-	Ab[lI] = altitudeBase(lI);
-	Ab[mI] = altitudeBase(mI);
-	Ab[rI] = altitudeBase(rI);
+	for(byte i=0; i<3; i++) Ab[i] = altitudeBase(i);
 	
 	// altitude height.  the extent of the triangle's altitude.
 	// these are the trilinear coordinates of the object.
 	// https://en.wikipedia.org/wiki/Trilinear_coordinates
-	Ah[lI] = altitudeHeight(lI);
-	Ah[mI] = altitudeHeight(mI);
-	Ah[rI] = altitudeHeight(rI);
+	for(byte i=0; i<3; i++) Ah[i] = altitudeHeight(i);
 	
 	// use Vivani's theorem to adjust the sum of the heights to total height.
-	word deltaAh = (HL - (Ah[lI]+Ah[mI]+Ah[rI])) >> 1; // >>1 is /2.
-	Ah[lI] = Ah[lI]==0 ? deltaAh : Ah[lI];
-	Ah[mI] = Ah[mI]==0 ? deltaAh : Ah[mI];
-	Ah[rI] = Ah[rI]==0 ? deltaAh : Ah[rI];
+//	word deltaAh = (HL - (Ah[lI]+Ah[mI]+Ah[rI])) >> 1; // >>1 is /2.
+//	word deltaAh = (HL - (Ah[lI]+Ah[mI]+Ah[rI])) / 2;
+	word deltaAh = HL;
+	for(byte i=0; i<3; i++) deltaAh-=Ah[i];
+	deltaAh = deltaAh < HL ? deltaAh >> 1 : 0; // >>1 is /2
+	for(byte i=0; i<3; i++) Ah[i] = Ah[i]==0 ? deltaAh : Ah[i];
 
 	// from here, we want to know the location on the side length that is
 	// collinear with the opposite sensor and the object. that is, a 
@@ -164,7 +168,7 @@ void Network::decodeMessage() {
 word Network::altitudeBase(byte i) {
 	// use right-i and left-i distances
 	return(
-		((SL2+squared(distance[left(i)]))-squared(distance[right(i)])) / twoSL
+		((SL2+squared(distance[right(i)]))-squared(distance[left(i)])) / twoSL
 	);
 }
 
@@ -187,7 +191,7 @@ word Network::altitudeHeight(byte i) {
 word Network::collinearBase(byte i) {
 	// use left-i altitude height and right-i altitude height
 	return(
-		((unsigned long)Ah[left(i)]*SL)/((unsigned long)Ah[left(i)]+(unsigned long)Ah[right(i)])
+		((unsigned long)(Ah[left(i)])*SL)/((unsigned long)Ah[left(i)]+(unsigned long)Ah[right(i)])
 	);
 }
 
@@ -257,7 +261,7 @@ word Network::squareRoot(unsigned long x) {
     return (word)res;
 }
 
-byte Network::left(byte i) {
+byte Network::right(byte i) {
 	// get the tens digit
 	byte tens = i - (i % 10); 
 	// get the ones digit
@@ -266,7 +270,7 @@ byte Network::left(byte i) {
 	return( tens + ones<2 ? ones+1 : 0 );
 }
 
-byte Network::right(byte i) {
+byte Network::left(byte i) {
 	// get the tens digit
 	byte tens = i - (i % 10); 
 	// get the ones digit
