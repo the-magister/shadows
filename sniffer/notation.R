@@ -39,12 +39,15 @@ edges = data_frame(
 base.plot = ggplot() +
 	aes(color=name) +
 	geom_segment(data=edges, size=1, aes(x=x0,y=y0,xend=x1,yend=y1)) +
-	geom_text(data=vertices, aes(x=x0,y=y0,label=name), angle=30, hjust=-0.5) +
+	geom_text(data=vertices, aes(x=x0,y=y0,label=name,angle=ang.cen*360/2/pi), hjust=1.2) +
+	geom_text(data=edges,aes(label=name,x=(x1+x0)/2,y=(y1+y0)/2,angle=ang*360/2/pi),vjust=-0.7) +
 	geom_point(data=vertices, size=5, aes(x=x0,y=y0), shape=17) +
-	coord_equal() +
+	coord_fixed(ylim=c(-50,SENSOR_DIST+50),xlim=c(-50,SENSOR_DIST+50),ratio=1) +
 	scale_color_colorblind() +
-	labs(x="Horizontal, in*10",y="Vertical, in*10", color="Object")
-#print(base.plot)
+	labs(x="Horizontal, in*10",y="Vertical, in*10", color="Object") +
+	geom_spoke(data=vertices, aes(x=x0, y=y0, angle=ang.left), radius=50, color="black", arrow=arrow())
+
+print(base.plot)
 
 random.target = function() {
 	ang = runif(1,vertices$ang.right[1],vertices$ang.left[1])
@@ -221,5 +224,13 @@ soln.ch = soln.cb %>%
 
 soln.plot = soln.plot +
 	geom_segment(data=soln.ch, aes(x=x.cb,y.cb,xend=x.ch,yend=y.ch))
-print(soln.plot)
+#print(soln.plot)
 
+soln.plot = soln.plot +
+	with(soln.ch, annotate(geom="text", x=x.cb, y=y.cb, label="Cb", angle=360*ang/2/pi, vjust=-1)) +
+	with(soln.ah, annotate(geom="text", x=x.ab, y=y.ab, label="Ab", angle=360*ang/2/pi, vjust=-1)) +
+	with(soln.ch, annotate(geom="text", x=(x.cb+x.ch)/2, y=(y.cb+y.ch)/2, label="Ch", angle=360*ang/2/pi, vjust=-1)) +
+	with(soln.ah, annotate(geom="text", x=(x.ab+x.ah)/2, y=(y.ab+y.ah)/2, label="Ah", angle=360*ang/2/pi, vjust=-1)) 
+	
+print(soln.plot)
+ggsave("solution_plot.png",height=8,width=8,units="in",dpi=150)
