@@ -8,10 +8,12 @@
 #include <WirelessHEX69.h>
 #include <EEPROM.h>
 
-#include <Network.h>
-
 #include <FastLED.h>
 #include <FiniteStateMachine.h>
+
+// Shadows specific libraries.  
+#include <Network.h>
+#include <Location.h>
 
 #include "Animation.h"
 
@@ -22,6 +24,8 @@ State idle = State(idleUpdate); // nothing going on
 void inPlaneUpdate();
 State inPlane = State(inPlaneUpdate); // sensors are picking up an object, and it's within the place of the triangle
 FSM S = FSM(idle); // start idle
+
+#define IN_PLANE HL-50
 
 // track state
 systemState lastState;
@@ -50,10 +54,9 @@ boolean objectInPlane() {
 
 void loop() {
   // update the radio traffic
-  byte fromNode = N.update();
-  if( fromNode > 0 ) {
-    Serial << F("RX: ") << fromNode << F(" ");
-    N.showMessage();
+  if( N.update() ) {
+    Serial << F("RX: ");
+    N.showNetwork();
     N.decodeMessage(); // translate distances to altitude and intercept information
   }
 
@@ -100,7 +103,7 @@ void inPlaneUpdate() {
   // drive shadow center according to intercept
   A.setCenter(
     map(
-      constrain(N.mCb, 0, SL),  // constrain x to be [0, SL]
+      constrain(L.Cb[N.myIndex], 0, SL),  // constrain x to be [0, SL]
       0, SL, // map [0, SL]
       0, NUM_LEDS - 1 // to [0, NUM_LEDS-1]
     )
@@ -109,7 +112,7 @@ void inPlaneUpdate() {
   // drive shadow extent according to range
   A.setExtent(
     map(
-      constrain(N.mCh, 0, HL),
+      constrain(L.Ch[N.myIndex], 0, HL),
       0, HL, // map [0, HL]
       0, NUM_LEDS / 2 // to [0, NUM_LEDS/2]
     )

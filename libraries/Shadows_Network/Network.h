@@ -21,7 +21,7 @@
 #define GROUPID				157  // local group
 #define POWERLEVEL			31 // 0-31, 31 being maximal
 
-#define PROGRAMMER_NODE		254 // detecting traffic from this node should tell everyone to STFU already
+#define PROGRAMMER_NODE		254 // nodeID of wireless programmer
 
 #define N_NODES				3 // 3 Lights, 3 Location nodes
 
@@ -40,53 +40,6 @@ enum systemState {
 #define FLASH_SS	8 // and FLASH SS on D8
 #define FLASH_ID	0xEF30 // EF30 for windbond 4mbit flash
 
-// geometry of the devices, 16-bit
-#define SL			755U // sensor-sensor distance; i.e. side length
-#define HL			655U // sensor-LED distance; i.e. altitude
-#define IN_PLANE	625U // sensor-LED distance threshold for "detected something"
-#define LL			720U // LED strip length; 
-
-// useful constants, 32 bit
-#define SL2			(755UL*755UL) // squared side length
-#define twoSL		(2UL*755UL)   // two times size length
-
-/*
-Physical layout:
-    ---- SL --->
-         20
-   11 -------- 12   ^
-     \        /     |
-      \      /      HL
-    22 \    / 21    |
-        \  /        |
-         10         |
-
-Tens digit:
-  1 = nodes with ultrasound rangefinders (Node_Location)
-  2 = nodes with RGB LED strips (Node_Light)
-  
-Ones digit (with same tens digit):
-  +1 (modulo) = "to my right"/next
-  -1 (modulo) = "to my left"/previous
-  
-Ultrasound ring goes clockwise round-robin:
-
-  Rx From	Is Next		Tx To
-  10		11			12
-  11		12			10
-  12		10			11
-  
-*/ 
-
-// NOTE: I specifically skipped getter/setter functions to 
-// strip the memory usage down to be as small as possible.
-// Stylistically, this is ugly, and it does exposure private 
-// components to unintended alteration.  However, both the 
-// sensor and lighting nodes use this code so I want a very
-// small memory footprint. I did use some bytes for indexing
-// variables, as I felt that the readibility of the code
-// was greatly improved, so this is a compromise position.
-
 class Network {
   public:
 	// initialize radio
@@ -99,49 +52,32 @@ class Network {
 	byte right(byte i);
 	byte left(byte i);
 
-	// for both Node_Light and Node_Location
-	// check for radio traffic; return true if we have a message
+	// check for radio traffic; return true if we have a message or state change
 	boolean update();
-	byte senderNodeID;
-	unsigned long message;
-	// show the contents of the message information
-	void showMessage();
+	byte senderNodeID, targetNodeID; // from and to information for message
+	unsigned long message; // message 
+	systemState state; // system state
+	
+	// show the contents of the network information
+	void showNetwork();
 
 	// translate message -> distance
 	void decodeMessage();
-	word distance[N_NODES]; // distance from sensor to object
+	word distance[N_NODES]; // distances from sensors to object
 	byte s; // 2 extra bits in message
 
-	// system state
-	systemState state;
+	// send state; returns true if ACKd or toNodeID==BROADCAST
+	boolean sendState(byte toNodeID=BROADCAST);
 
 	// for Node_Location
 	// translate distance -> message
 	void encodeMessage();
-	// send messsage 
-	void send(byte toNodeID);
+	// send messsage; returns true if ACKd
+	boolean sendMessage(byte toNodeID);
 
-	// for Node_Lights
-	void calculateLocation();
-	// which sets the following target information
-	word Ab[N_NODES], Ah[N_NODES]; // object location relative to LEDs, altitude basis
-	word mCb[N_NODES], mCh[N_NODES]; // object location relative to LEDs, collinear basis
-	word mArea[N_NODES]; // relative area of the triangle defined by the object and LEDs, relative to total area.
-	
 	// all of this is conducted over radio
 	RFM69 radio;
 	
-  private:
-
-	// helper functions
-	unsigned long squared(word x);
-	word squareRoot(unsigned long x);
-
-	word altitudeBase(byte i);
-	word altitudeHeight(byte i);
-	word collinearBase(byte i);
-	word collinearHeight(byte i);
-	word area(byte i);
 };
 
 extern Network N;

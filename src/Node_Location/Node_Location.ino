@@ -7,6 +7,7 @@
 #include <avr/wdt.h>
 #include <WirelessHEX69.h>
 #include <EEPROM.h>
+
 // Shadows specific libraries.  
 #include <Network.h>
 #include <Distance.h>
@@ -16,13 +17,19 @@
 #define RESEND_INTERVAL 1000UL
 
 systemState lastState;
-word distanceToLEDs = SL;
+byte recvFromNodeID, transToNodeID;
+
+#define IN_PLANE (654U-10U)
 
 void setup() {
   Serial.begin(115200);
 
   // start the radio
   N.begin();
+
+  // track order for round-robin
+  recvFromNodeID = N.left(N.myNodeID);
+  transToNodeID = N.right(N.myNodeID);
 
   // wait enough time to get a reprogram signal
   Metro startupDelay(1000UL);
@@ -43,16 +50,22 @@ unsigned long elapsedTime() {
 
 void loop() {
   // update the radio traffic
-  byte fromNode = N.update();
-  if( fromNode > 0 ) {
-    Serial << F("RX: ") << fromNode << F(" ");
-    N.showMessage();
+  boolean haveTraffic = N.update();
+  
+  if( haveTraffic ) {
+    Serial << F("RX: ");
+    N.showNetwork(); 
+    N.decodeMessage(); // updating the other's distance information so I can relay it with mine.
   }
 
+  // figure out if we need to act
+  boolean shouldAct = haveTraffic && (N.senderNodeID == recvFromNodeID);
+
   // do I need to update the position information?
-  if ( fromNode == N.lI ) {
+  if ( shouldAct ) {
     digitalWrite(LED, HIGH);
 
+/*
     // if it's good to recalibrate (nothing sensed), do so.
     static Metro calibrationInterval(CALIBRATION_INTERVAL);
     if ( N.distance[0] < IN_PLANE || N.distance[1] < IN_PLANE || N.distance[2] < IN_PLANE ) {
@@ -63,14 +76,15 @@ void loop() {
       D.calibrate();
       N.state = M_NORMAL;
     }
-
+*/
     // how much time is spent by the other nodes?
     static unsigned long otherTime = 0;
     otherTime = (9*otherTime + 1*elapsedTime())/10; // running average
     
     // update distance
     word dist = D.read();
-    N.distance[N.mI] = map(dist, 0, distanceToLEDs, 0, HL); // scale to correct for warp
+//    N.distance[N.myIndex] = map(dist, 0, distanceToLEDs, 0, HL); // scale to correct for warp
+    N.distance[N.myIndex] = dist;
     N.encodeMessage(); 
     
     // how much time is spent reading the sensors?
@@ -78,21 +92,21 @@ void loop() {
     sensorTime = (9*sensorTime + 1*elapsedTime())/10; // running average
     
     // send
-    N.send();
+    boolean haveSent = false;
+    N.showNetwork();  
+    while( ! haveSent ) {
+      Serial << F("Sending...") << endl;
+      haveSent = N.sendMessage(transToNodeID);
+    }
+    Serial << F("ACKd.") << endl;
 
     // how much time is spent by sending data?
     static unsigned long sendTime = 0;
     sendTime = (9*sendTime + 1*elapsedTime())/10; // running average
  
     // show
-    Serial << F("TX: "); N.showMessage();
+    Serial << F("TX: "); N.showNetwork();
 
-    digitalWrite(LED, LOW);
-
-    if( dist > IN_PLANE ) {
-      distanceToLEDs = (49*distanceToLEDs + 1*dist)/50; // running average
-    }
-    
     static byte loopCount = 0;
     loopCount++;
     if( loopCount >= 10 ) {
@@ -101,10 +115,10 @@ void loop() {
       Serial << F("otherTime (us)=") << otherTime << endl;
       Serial << F("sensorTime (us)=") << sensorTime << endl;
       Serial << F("sendTime (us)=") << sendTime << endl;
-      Serial << F("SUM (sensor+2*send) (us)=") << (sensorTime+2*sendTime) << endl;
       Serial << F("===") << endl;
     }
     
+    digitalWrite(LED, LOW);
   }
 
 }

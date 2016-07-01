@@ -46,11 +46,9 @@
 #include <EEPROM.h>
 #include <Network.h>
 
-#define FREQUENCY   RF69_915MHZ
 #define ACK_TIME    100  // # of ms to wait for an ack
 #define TIMEOUT     3000
 
-RFM69 radio;
 char c = 0;
 char input[64]; //serial input buffer
 byte targetID = 0;
@@ -66,11 +64,9 @@ boolean sniff = false;
 
 void setup() {
   Serial.begin(115200);
-  
-  radio.initialize(FREQUENCY, PROGRAMMER_NODE, GROUPID);
-  radio.setHighPower(); // only for RFM69HW!
-  radio.promiscuous(true); // so broadcasts are received
 
+  N.begin(PROGRAMMER_NODE);
+ 
   Serial.println("Start wireless gateway...");
 }
 
@@ -86,7 +82,7 @@ void loop() {
       // and let the nodes know a programming string is coming
       sendMessage(messageProgram);
       
-      boolean success = CheckForSerialHEX((byte*)input, inputLen, radio, targetID, TIMEOUT, ACK_TIME, false);
+      boolean success = CheckForSerialHEX((byte*)input, inputLen, N.radio, targetID, TIMEOUT, ACK_TIME, false);
       if( success ) sendMessage(messageReboot);
       
     }
@@ -105,10 +101,8 @@ void loop() {
       Serial.print(newTarget);
       Serial.println(":OK");
       // and let the nodes know a programming string is coming
-      for(byte i=0;i<10; i++) {
-        radio.send(BROADCAST, (const void*)&messageProgram, sizeof(systemState));
-        delay(20);
-      }
+      sendMessage(messageProgram);
+      
     } else {
       Serial.print(input);
       Serial.print(":INV");
@@ -140,31 +134,18 @@ void loop() {
     Serial << F("[RE]boot programming Message") << endl;
   }
 
-  if (radio.receiveDone())  {
-    if ( radio.DATALEN == sizeof(Message) ) {
-      // read it
-      N.msg = *(Message*)radio.DATA;
-      if( sniff ) { 
-//        Serial << radio.SENDERID << F(" > ");
-//        N.printMessage();
-       if( radio.SENDERID == 10 ) {
-          static unsigned long then = millis();
-          unsigned long now = millis();
-          unsigned long cycleTime = now-then;
-          then = now;
-          Serial << F("Cycle time (ms)=") << cycleTime;
-          Serial << F("\tFrequency (Hz)=") << 1.0/((float)cycleTime/1000.0) << endl;
-        }
-      }
-    } else if( radio.DATALEN>1 ) {
-      for (byte i = 0; i < radio.DATALEN; i++)
-        Serial.print((char)radio.DATA[i]);
-      Serial << endl;
-    }
+  if( N.update() ) {
+    if( sniff ) {
+      N.showNetwork();
 
-    if (radio.ACK_REQUESTED && radio.TARGETID == PROGRAMMER_NODE) {
-      radio.sendACK();
-      Serial << F(" - ACK sent") << endl;
+      if( N.senderNodeID == 10 ) {
+        static unsigned long then = millis();
+        unsigned long now = millis();
+        unsigned long cycleTime = now-then;
+        then = now;
+        Serial << F("Cycle time (ms)=") << cycleTime;
+        Serial << F("\tFrequency (Hz)=") << 1.0/((float)cycleTime/1000.0) << endl;
+      }
     }
 
     Blink(LED, 5); //heartbeat
@@ -180,8 +161,9 @@ void Blink(byte PIN, int DELAY_MS)
 }
 
 void sendMessage(systemState msg) {
+  N.state = msg;
   for(byte i=0;i<10; i++) {
-    radio.send(BROADCAST, (const void*)&msg, sizeof(systemState));
+    N.sendState();
     delay(5);
   }  
 }

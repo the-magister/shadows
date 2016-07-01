@@ -1,5 +1,5 @@
-#ifndef Network_h
-#define Network_h
+#ifndef Location_h
+#define Location_h
 
 #include <Arduino.h>
 
