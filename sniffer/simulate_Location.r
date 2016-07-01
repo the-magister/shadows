@@ -1,5 +1,5 @@
 ### get an example
-source('notation.R')
+source('notation2.R')
 
 # previous calculation to compare back to.
 ab.soln = ab
@@ -7,10 +7,6 @@ ah.soln = ah
 cb.soln = cb
 ch.soln = ch
 bl.soln = bl
-
-# constant at compile time, taking care to promote to 32-bit
-s2 = SENSOR_DIST*SENSOR_DIST
-stwo = SENSOR_DIST*2
 
 # indexing constrains
 # C: minIndex = 0
@@ -20,9 +16,9 @@ maxIndex = minIndex+2
 
 # get indexes
 # left index
-left = function(i) { ifelse(i>minIndex, i-1, maxIndex) }
+left = function(i) { ifelse(i<maxIndex, i+1, minIndex) }
 # right index
-right = function(i) { ifelse(i<maxIndex, i+1, minIndex) }
+right = function(i) { ifelse(i>minIndex, i-1, maxIndex) }
 
 # store the distances
 D = locDist
@@ -31,12 +27,62 @@ D = locDist
 # promote the operand to 32-bit first; return 32-bit
 squared = function(x) { x*x }
 squareRoot = function(x) { round(sqrt(x)) }
+semiPerimiter = function(i) {
+	floor( 
+		( SENSOR_DIST + D[left(i)] + D[right(i)] ) / 2
+	)
+}
+
+# altitude height
+altitudeHeight = function(i) {
+	a = SENSOR_DIST
+	s = semiPerimiter(i)
+	floor( 
+		(2*squareRoot(s*(s-D[left(i)])) * squareRoot((s-a)*(s-D[right(i)])))/a 
+	)
+}
+Ah = c(0,0,0)
+Ah[1] = altitudeHeight(1)
+Ah[2] = altitudeHeight(2)
+Ah[3] = altitudeHeight(3)
+
+# use Vivani's theorem to adjust sum of heights to total altitude
+correctAltitudeHeight = function() {
+
+	# compute the difference in sum of heights from SL
+	deltaAh = HEIGHT_LEN
+	for(i in 1:3) deltaAh = deltaAh - Ah[i]
+	
+	# are we done?
+	if( deltaAh == 0 ) return()
+	
+	# what do we do with it?
+	if( deltaAh<3 && deltaAh>-3 ) {
+		# small amount, so finish it
+		if( Ah[1] < Ah[2] && Ah[1] < Ah[3] ) { 
+			Ah[1] <<- Ah[1] + deltaAh 
+		} else if( Ah[2] < Ah[1] && Ah[2] < Ah[3] ) { 
+			Ah[2] <<- Ah[2] + deltaAh 
+		} else { 
+			Ah[3] <<- Ah[3] + deltaAh
+		}
+
+		return()
+	} else {
+		# dole that difference out equally.
+		addTo = floor(deltaAh/3)
+		for(i in 1:3) Ah[i] <<- Ah[i] + addTo
+		
+		# and do this again to grab remainder
+		return( correctAltitudeHeight() )
+	}
+}
+correctAltitudeHeight()
+if( !all(Ah == ah.soln) ) stop("altitude height failed.")
 
 # altitude base
 altitudeBase = function(i) {
-	floor( 
-		((s2+squared(D[right(i)]))-squared(D[left(i)]))/stwo 
-	)
+	squareRoot( squared(D[left(i)]) - squared(Ah[i]) )
 }
 Ab = c(0,0,0)
 Ab[1] = altitudeBase(1)
@@ -44,27 +90,10 @@ Ab[2] = altitudeBase(2)
 Ab[3] = altitudeBase(3)
 if( !all(Ab == ab.soln) ) stop("altitude base failed.")
 
-# altitude height
-altitudeHeight = function(i) {
-	if( Ab[i] > D[right(i)] ) return(0)
-	squareRoot(squared(D[right(i)]) - squared(Ab[i]))
-}
-Ah = c(0,0,0)
-Ah[1] = altitudeHeight(1)
-Ah[2] = altitudeHeight(2)
-Ah[3] = altitudeHeight(3)
-	
-# use Vivani's theorem to adjust sum of heights to total altitude
-deltaAh = round( (HEIGHT_LEN - (Ah[1]+Ah[2]+Ah[3]))/2 )
-Ah[1] = ifelse(Ah[1]==0, deltaAh, Ah[1])
-Ah[2] = ifelse(Ah[2]==0, deltaAh, Ah[2])
-Ah[3] = ifelse(Ah[3]==0, deltaAh, Ah[3])
-if( !all(Ah == ah.soln) ) stop("altitude height failed.")
-
 # collinear base
 collinearBase = function(i) {
 	floor(
-		(Ah[left(i)]*SENSOR_DIST)/(Ah[left(i)]+Ah[right(i)])
+		(Ah[right(i)]*SENSOR_DIST)/(Ah[right(i)]+Ah[left(i)])
 	)
 }
 Cb = c(0,0,0)

@@ -100,6 +100,20 @@ void Network::showMessage() {
 	Serial << endl;
 }
 
+
+/*
+message is 32 bits:
+	0-9   = d[1]
+	10-19 = d[2]
+	20-29 = d[3]
+	30-31 = s (two extra MSB)
+
+with 10 bits of information, values up to 1023 are possible.  the maximum
+sensor reading is ~65 inches, so we could transmit decainches (~650 din)
+comfortably.  Importantly, we can use word storage for the decainch data, and cubic 
+operations would still fit in unsigned long (32 bits).
+*/
+
 void Network::encodeMessage() {
 
 	this->message = 0;
@@ -126,7 +140,9 @@ void Network::decodeMessage() {
 	this->distance[0] = (this->message >>  2) & 1023UL; // dumping six MSB
 	this->distance[1] = (this->message >> 12) & 1023UL; // dumping six MSB
 	this->distance[2] = (this->message >> 22) & 1023UL; // dumping six MSB
+}
 
+void Network::calculateLocation() {
 	// the distance measures to the right and left of the LED strips and
 	// the known distance between the sensors form a triangle.
 
@@ -168,7 +184,7 @@ void Network::decodeMessage() {
 word Network::altitudeBase(byte i) {
 	// use right-i and left-i distances
 	return(
-		((SL2+squared(distance[right(i)]))-squared(distance[left(i)])) / twoSL
+		((SL2+squared(distance[left(i)]))-squared(distance[right(i)])) / twoSL
 	);
 }
 
@@ -176,9 +192,9 @@ word Network::altitudeBase(byte i) {
 // use Pythagorean's theorem to calculte the altitude 
 word Network::altitudeHeight(byte i) {
 	// use right-i distance and i altitude base
-	if( Ab[i] > distance[right(i)] ) return( 0 );
+	if( Ab[i] > distance[left(i)] ) return( 0 );
 	return( 
-		squareRoot( squared(distance[right(i)]) - squared(Ab[i]) ) 
+		squareRoot( squared(distance[left(i)]) - squared(Ab[i]) ) 
 	);
 }
 
@@ -191,7 +207,7 @@ word Network::altitudeHeight(byte i) {
 word Network::collinearBase(byte i) {
 	// use left-i altitude height and right-i altitude height
 	return(
-		((unsigned long)(Ah[left(i)])*SL)/((unsigned long)Ah[left(i)]+(unsigned long)Ah[right(i)])
+		((unsigned long)(Ah[right(i)])*SL)/((unsigned long)Ah[right(i)]+(unsigned long)Ah[left(i)])
 	);
 }
 
@@ -261,7 +277,8 @@ word Network::squareRoot(unsigned long x) {
     return (word)res;
 }
 
-byte Network::right(byte i) {
+// to my left is my index +1
+byte Network::left(byte i) {
 	// get the tens digit
 	byte tens = i - (i % 10); 
 	// get the ones digit
@@ -270,7 +287,8 @@ byte Network::right(byte i) {
 	return( tens + ones<2 ? ones+1 : 0 );
 }
 
-byte Network::left(byte i) {
+// to my right is my index -1
+byte Network::right(byte i) {
 	// get the tens digit
 	byte tens = i - (i % 10); 
 	// get the ones digit

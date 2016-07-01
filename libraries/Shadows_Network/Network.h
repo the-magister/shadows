@@ -17,11 +17,13 @@
 
 // comms settings and information
 
-#define BROADCAST			 0  // all nodes will hear this
+#define BROADCAST			0  // all nodes will hear this
 #define GROUPID				157  // local group
 #define POWERLEVEL			31 // 0-31, 31 being maximal
 
 #define PROGRAMMER_NODE		254 // detecting traffic from this node should tell everyone to STFU already
+
+#define N_NODES				3 // 3 Lights, 3 Location nodes
 
 // system state messages
 enum systemState {
@@ -52,10 +54,10 @@ enum systemState {
 Physical layout:
     ---- SL --->
          20
-   12 -------- 11   ^
+   11 -------- 12   ^
      \        /     |
       \      /      HL
-    21 \    / 22    |
+    22 \    / 21    |
         \  /        |
          10         |
 
@@ -67,32 +69,14 @@ Ones digit (with same tens digit):
   +1 (modulo) = "to my right"/next
   -1 (modulo) = "to my left"/previous
   
-Ultrasound ring goes counter-clockwise round-robin:
+Ultrasound ring goes clockwise round-robin:
 
-  Rx From   Is Next
-  10		11
-  11		12
-  12		10
+  Rx From	Is Next		Tx To
+  10		11			12
+  11		12			10
+  12		10			11
   
 */ 
-
-
-/*
-message is 32 bits:
-	0-9   = d[1]
-	10-19 = d[2]
-	20-29 = d[3]
-	30-31 = enum { OOR_3, OOR_2, OOR_1, OK } indicating sensor ranging outcome
-
-that would turn the message size from 2*3*3=18 bytes to 4*1=4 bytes, which
-would cut the transmission time from ~4ms to ~2ms.  With the ACK, that's ~8ms to ~4ms,
-which is significant in the context of a ~10ms ranging activity.  
-
-with 10 bits of information, values up to 1023 are possible.  the maximum
-sensor reading is ~65 inches, so we could transmit decainches (~650 din)
-comfortably.  Importantly, we can use word storage for the decainch data, and cubic 
-operations would still fit in unsigned long (32 bits).
-*/
 
 // NOTE: I specifically skipped getter/setter functions to 
 // strip the memory usage down to be as small as possible.
@@ -108,37 +92,41 @@ class Network {
 	// initialize radio
 	void begin(byte nodeID=255, byte groupID=GROUPID, byte freq=RF69_915MHZ, byte powerLevel=POWERLEVEL);
 	// return my node ID
-	byte myNodeID;
-	// indexing information; left, me, right
-	byte lI, mI, rI;
-	// or, a more general form
+	byte myNodeID; // 10-12 for Location; 20-22 for Lights
+	// return my index into arrays
+	byte myIndex; // 0-2
+	// which can be used to understand what is to the right and left
 	byte right(byte i);
 	byte left(byte i);
 
 	// for both Node_Light and Node_Location
-	// check for radio traffic; return sender's node ID if we have a Message
-	byte update();
+	// check for radio traffic; return true if we have a message
+	boolean update();
+	byte senderNodeID;
 	unsigned long message;
-
 	// show the contents of the message information
 	void showMessage();
-	
+
+	// translate message -> distance
+	void decodeMessage();
+	word distance[N_NODES]; // distance from sensor to object
+	byte s; // 2 extra bits in message
+
 	// system state
 	systemState state;
 
 	// for Node_Location
+	// translate distance -> message
 	void encodeMessage();
-	// send location information encoded in msg
-	void send();
+	// send messsage 
+	void send(byte toNodeID);
 
 	// for Node_Lights
-	void decodeMessage();
+	void calculateLocation();
 	// which sets the following target information
-	byte s; // 2 bits in message
-	word distance[3]; // distance from sensor to object
-	word Ab[3], Ah[3]; // object location relative to LEDs, altitude basis
-	word mCb, mCh; // object location relative to this LED, collinear basis
-	word mArea; // relative area of the triangle defined by the object and this LED, relative to total area.
+	word Ab[N_NODES], Ah[N_NODES]; // object location relative to LEDs, altitude basis
+	word mCb[N_NODES], mCh[N_NODES]; // object location relative to LEDs, collinear basis
+	word mArea[N_NODES]; // relative area of the triangle defined by the object and LEDs, relative to total area.
 	
 	// all of this is conducted over radio
 	RFM69 radio;
