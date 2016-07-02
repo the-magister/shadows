@@ -15,7 +15,7 @@ void Network::begin(byte nodeID, byte groupID, byte freq, byte powerLevel) {
 		EEPROM.update(radioConfigLocation, nodeID);
 		this->myNodeID = nodeID;
 	}
-	if( this->myNodeID > 200 ) {
+	if( this->myNodeID == 255 ) {
 		Serial << F("Network. ERROR no nodeID found in EEPROM!") << endl;
 		Serial << F("Enter the node number for this node:") << endl;
 		while( ! Serial.available() );
@@ -47,21 +47,23 @@ void Network::begin(byte nodeID, byte groupID, byte freq, byte powerLevel) {
 
 // to my left is my index +1
 byte Network::left(byte i) {
-	// get the tens digit
-	byte tens = i - (i % 10); 
-	// get the ones digit
-	byte ones = i - tens;
-	
-	return( tens + ones<2 ? ones+1 : 0 );
+	return(
+		i % 10 == 2 ? i-2 : i+1
+	);	
 }
 
 // to my right is my index -1
 byte Network::right(byte i) {
+	return(
+		i % 10 == 0 ? i+2 : i-1
+	);	
+	
 	// get the tens digit
 	byte tens = i - (i % 10); 
 	// get the ones digit
-	byte ones = i - tens;
+	byte ones = i % 10;
 	
+	Serial << "left " << tens << "\t" << ones << "\t" << (tens + ones>0 ? ones-1 : 2) << endl;
 	return( tens + ones>0 ? ones-1 : 2 );
 }
 
@@ -69,7 +71,16 @@ byte Network::right(byte i) {
 boolean Network::update() {
 
 	// new traffic?
-	if( radio.receiveDone() ) {   
+	if( radio.receiveDone() ) {  
+		// check for programming 
+		if( radio.SENDERID == PROGRAMMER_NODE && radio.TARGETID == this->myNodeID ) {
+			Serial << F("Network. Reprogramming message?") << endl;
+			// being asked to reprogram ourselves by Gateway?
+			CheckForWirelessHEX(this->radio, flash);
+			
+		} 
+
+		// check for messages
 		if( radio.DATALEN==sizeof(message) ) {
 			
 			// read it
@@ -102,12 +113,7 @@ boolean Network::update() {
 			
 			return( true );
 			
-		} else if( radio.TARGETID == this->myNodeID ) {
-			
-			// being asked to reprogram ourselves by Gateway?
-			CheckForWirelessHEX(this->radio, flash);
-			
-		} else if( radio.SENDERID == PROGRAMMER_NODE ) {
+		} else if( radio.SENDERID == PROGRAMMER_NODE && radio.DATALEN > 30 ) {
 			
 			// we need to wait until the airwaves are clear.
 			Serial << F("Network. Programmer traffic.") << endl;
@@ -152,6 +158,9 @@ boolean Network::sendState(byte toNodeID) {
 	// put check in to make sure we're not clobbering messages from other transceivers
 	update();
 
+	targetNodeID = toNodeID;
+	senderNodeID = myNodeID;
+
 	if( toNodeID != BROADCAST ) {
 		return( 
 			radio.sendWithRetry(toNodeID, (const void*)(&state), sizeof(state), 3, 10)
@@ -188,11 +197,18 @@ boolean Network::sendMessage(byte toNodeID) {
 	// put check in to make sure we're not clobbering messages from other transceivers
 	update();
 
-	if( this->state != M_PROGRAM ) {
+	targetNodeID = toNodeID;
+	senderNodeID = myNodeID;
+
+	if( toNodeID != BROADCAST ) {
 		return( 
 			radio.sendWithRetry(toNodeID, (const void*)(&message), sizeof(message), 3, 10)
 		);
+	} else {
+		radio.send(BROADCAST, (const void*)(&message), sizeof(message));
+		return( true );
 	}
+
 }
 
 Network N;

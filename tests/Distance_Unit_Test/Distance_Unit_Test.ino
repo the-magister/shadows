@@ -22,9 +22,9 @@ void loop() {
   unsigned long tic = elapsedTime();
 
   // calibrate at the start and periodically
-  static byte loopCount = 10;
+  static byte loopCount = 0;
   loopCount++;
-  if ( loopCount >= 10 ) {
+  if ( loopCount >= 60 ) {
     loopCount = 0;
     tic = elapsedTime();
     D.calibrate();

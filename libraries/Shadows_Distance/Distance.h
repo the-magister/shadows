@@ -21,6 +21,7 @@ class Distance {
     void begin();
 
     // calibrate sensor;  should be done periodically to adjust for changing temperature and humidity
+    boolean calibrated = false;
     void calibrate();
 
     // read distance

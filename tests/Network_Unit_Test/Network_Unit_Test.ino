@@ -10,7 +10,38 @@
 
 #include <Network.h>
 
-#define N_NODES 3
+
+
+unsigned long elapsedTime() {
+  static unsigned long then = micros();
+  unsigned long now = micros();
+  unsigned long delta = now - then;
+  then = now;
+  return ( delta );
+}
+
+boolean compare3(word soln[N_NODES], word calc[N_NODES]) {
+  Serial << F("soln\t") << F("\t") << soln[0]  << F("\t") << soln[1]  << F("\t") << soln[2] << endl;
+  Serial << F("calc\t") << F("\t") << calc[0]  << F("\t") << calc[1]  << F("\t") << calc[2] << endl;
+ 
+  if ( memcmp(soln, calc, sizeof(calc)) != 0 ) {
+    return( false );
+  } else {
+    return( true );
+  }
+}
+
+boolean compare(word soln, word calc) {
+  Serial << F("soln\t") << F("\t") << soln << endl;
+  Serial << F("calc\t") << F("\t") << calc << endl;
+ 
+  if ( soln != calc ) {
+    return( false );
+  } else {
+    return( true );
+  }
+}
+
 
 void setup() {
 
@@ -28,6 +59,8 @@ void setup() {
   test_state(); // should pass, but requires programmer node to be online
 
   test_message(); // should pass, but requires programmer node to be online
+
+  test_packets(); // check for packet loss, but requires programer node to be online
 
   Serial << F("====\nTests complete") << endl;
 }
@@ -75,7 +108,7 @@ void test_d(word low, word high) {
     N.encodeMessage();
     N.decodeMessage();
     
-    if ( ! compare(soln, N.distance) ) {
+    if ( ! compare3(soln, N.distance) ) {
       Serial << F("FAIL") << endl;
     } else {
       Serial << F("PASS") << endl;
@@ -90,34 +123,36 @@ void test_state() {
   Serial << F("==== TEST: sending states") << endl;
   
   N.state = M_CALIBRATE;
-
-  Serial << F("SOLN: ");
-  N.showNetwork();
   if ( ! N.sendState() ) {
-    Serial << F("FAIL") << endl;
+    Serial << F("FAIL:\t");
   } else {
-    Serial << F("PASS") << endl;
+    Serial << F("PASS:\t");
   }
+  N.showNetwork();
 
   N.state = M_PROGRAM;
-
-  Serial << F("SOLN: ");
-  N.showNetwork();
   if ( ! N.sendState(PROGRAMMER_NODE) ) {
-    Serial << F("FAIL") << endl;
+    Serial << F("FAIL:\t");
   } else {
-    Serial << F("PASS") << endl;
+    Serial << F("PASS:\t");
   }
+  N.showNetwork();
 
   N.state = M_NORMAL;
-
-  Serial << F("SOLN: ");
-  N.showNetwork();
   if ( ! N.sendState() ) {
-    Serial << F("FAIL") << endl;
+    Serial << F("FAIL:\t");
   } else {
-    Serial << F("PASS") << endl;
+    Serial << F("PASS:\t");
   }
+  N.showNetwork();
+
+  N.state = M_NORMAL;
+  if ( ! N.sendState() ) {
+    Serial << F("FAIL:\t");
+  } else {
+    Serial << F("PASS:\t");
+  }
+  N.showNetwork();
 
 
 }
@@ -132,54 +167,49 @@ void test_message() {
   N.distance[1] = random(0, 1023);
   N.distance[2] = random(0, 1023);
   N.encodeMessage();
-  
-  Serial << F("SOLN: ");
-  N.showNetwork();
-  
+   
   if ( ! N.sendMessage(PROGRAMMER_NODE) ) {
-    Serial << F("FAIL") << endl;
+    Serial << F("FAIL:\t");
   } else {
-    Serial << F("PASS") << endl;
+    Serial << F("PASS:\t");
   }
+  N.showNetwork();
 
   if ( ! N.sendMessage(123) ) {
-    Serial << F("FAIL") << endl;
+    Serial << F("FAIL:\t");
   } else {
-    Serial << F("PASS") << endl;
+    Serial << F("PASS:\t");
+  }
+  N.showNetwork();
+
+  if ( ! N.sendMessage(BROADCAST) ) {
+    Serial << F("FAIL:\t");
+  } else {
+    Serial << F("PASS:\t");
+  }
+  N.showNetwork();
+
+}
+
+
+
+// test for packet loss
+void test_packets() {
+  Serial << F("==== TEST: sending message") << endl;
+
+  int succ = 0;
+  int Nsend = 1000;
+  for(int i = 0; i<Nsend; i++) {
+    N.s = 0;
+    N.distance[0] = i;
+    N.distance[1] = 0;
+    N.distance[2] = 0;
+    N.encodeMessage();
+   
+    if ( N.sendMessage(PROGRAMMER_NODE) ) succ++;
+    else {  N.showNetwork(); }
   }
 
-
+  Serial << F("Sent packets=") << Nsend << F("\tACKd=") << succ << F("\tpercent=") << ((unsigned long)succ*100UL)/Nsend << endl;
 }
-
-
-unsigned long elapsedTime() {
-  static unsigned long then = micros();
-  unsigned long now = micros();
-  unsigned long delta = now - then;
-  then = now;
-  return ( delta );
-}
-
-boolean compare(word soln[N_NODES], word calc[N_NODES]) {
-  Serial << F("soln\t") << F("\t") << soln[0]  << F("\t") << soln[1]  << F("\t") << soln[2] << endl;
-  Serial << F("calc\t") << F("\t") << calc[0]  << F("\t") << calc[1]  << F("\t") << calc[2] << endl;
- 
-  if ( memcmp(soln, calc, sizeof(calc)) != 0 ) {
-    return( false );
-  } else {
-    return( true );
-  }
-}
-
-boolean compare(word soln, word calc) {
-  Serial << F("soln\t") << F("\t") << soln << endl;
-  Serial << F("calc\t") << F("\t") << calc << endl;
- 
-  if ( soln != calc ) {
-    return( false );
-  } else {
-    return( true );
-  }
-}
-
 

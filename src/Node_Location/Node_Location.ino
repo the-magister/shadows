@@ -18,6 +18,7 @@
 
 systemState lastState;
 byte recvFromNodeID, transToNodeID;
+boolean bootstrap = false;
 
 #define IN_PLANE (654U-10U)
 
@@ -30,7 +31,12 @@ void setup() {
   // track order for round-robin
   recvFromNodeID = N.left(N.myNodeID);
   transToNodeID = N.right(N.myNodeID);
+  Serial << F("Startup.  myNodeID=") << N.myNodeID << F("\trecvFrom=") << recvFromNodeID << F("\t transTo=") << transToNodeID << endl;
 
+  // do I need to get things moving?
+  if( N.myNodeID == 10 ) bootstrap = true;
+  Serial << F("Bootstrap responsibility? ") << bootstrap << endl;
+  
   // wait enough time to get a reprogram signal
   Metro startupDelay(1000UL);
   while (! startupDelay.check()) N.update();
@@ -55,14 +61,13 @@ void loop() {
   if( haveTraffic ) {
     Serial << F("RX: ");
     N.showNetwork(); 
-    N.decodeMessage(); // updating the other's distance information so I can relay it with mine.
   }
 
   // figure out if we need to act
-  boolean shouldAct = haveTraffic && (N.senderNodeID == recvFromNodeID);
+  boolean shouldAct = (N.state!=M_PROGRAM) && (haveTraffic) && (N.senderNodeID==recvFromNodeID);
 
   // do I need to update the position information?
-  if ( shouldAct ) {
+  if ( shouldAct || bootstrap ) {
     digitalWrite(LED, HIGH);
 
 /*
@@ -84,19 +89,24 @@ void loop() {
     // update distance
     word dist = D.read();
 //    N.distance[N.myIndex] = map(dist, 0, distanceToLEDs, 0, HL); // scale to correct for warp
+
+    N.decodeMessage(); // updating the other's distance information so I can relay it with mine.
+    Serial << F("Decode Distances:\t") << N.distance[0] << F("\t") << N.distance[1] << F("\t") << N.distance[2] << endl;
     N.distance[N.myIndex] = dist;
-    N.encodeMessage(); 
     
+    Serial << F("Update Distances:\t") << N.distance[0] << F("\t") << N.distance[1] << F("\t") << N.distance[2] << endl;
+    N.encodeMessage(); 
+    Serial << F("Encode Distances:\t") << N.distance[0] << F("\t") << N.distance[1] << F("\t") << N.distance[2] << endl;
+   
     // how much time is spent reading the sensors?
     static unsigned long sensorTime = 0;
     sensorTime = (9*sensorTime + 1*elapsedTime())/10; // running average
     
     // send
     boolean haveSent = false;
-    N.showNetwork();  
     while( ! haveSent ) {
       Serial << F("Sending...") << endl;
-      haveSent = N.sendMessage(transToNodeID);
+      haveSent = N.sendMessage(transToNodeID) || N.state==M_PROGRAM;
     }
     Serial << F("ACKd.") << endl;
 
@@ -107,6 +117,7 @@ void loop() {
     // show
     Serial << F("TX: "); N.showNetwork();
 
+    
     static byte loopCount = 0;
     loopCount++;
     if( loopCount >= 10 ) {
@@ -117,6 +128,9 @@ void loop() {
       Serial << F("sendTime (us)=") << sendTime << endl;
       Serial << F("===") << endl;
     }
+
+    // no need to bootstrap
+    bootstrap = false;
     
     digitalWrite(LED, LOW);
   }

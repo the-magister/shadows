@@ -21,7 +21,7 @@
 #define GROUPID				157  // local group
 #define POWERLEVEL			31 // 0-31, 31 being maximal
 
-#define PROGRAMMER_NODE		254 // nodeID of wireless programmer
+#define PROGRAMMER_NODE			254 // nodeID of wireless programmer
 
 #define N_NODES				3 // 3 Lights, 3 Location nodes
 
@@ -72,7 +72,7 @@ class Network {
 	// for Node_Location
 	// translate distance -> message
 	void encodeMessage();
-	// send messsage; returns true if ACKd
+	// send messsage; returns true if ACKd or toNodeID==BROADCAST
 	boolean sendMessage(byte toNodeID);
 
 	// all of this is conducted over radio
