@@ -154,6 +154,7 @@ void Network::decodeMessage() {
 	this->distance[2] = (this->message >> 22) & 1023UL; // dumping six MSB
 }
 
+/*
 boolean Network::sendState(byte toNodeID) {
 	// put check in to make sure we're not clobbering messages from other transceivers
 	update();
@@ -169,6 +170,16 @@ boolean Network::sendState(byte toNodeID) {
 		radio.send(BROADCAST, (const void*)(&state), sizeof(state));
 		return( true );
 	}
+}
+*/
+void Network::sendState(byte toNodeID) {
+	// put check in to make sure we're not clobbering messages from other transceivers
+	update();
+
+	targetNodeID = toNodeID;
+	senderNodeID = myNodeID;
+
+	radio.send(toNodeID, (const void*)(&state), sizeof(state));
 }
 
 void Network::encodeMessage() {
@@ -192,7 +203,7 @@ void Network::encodeMessage() {
 	
 }
 
-
+/*
 boolean Network::sendMessage(byte toNodeID) {
 	// put check in to make sure we're not clobbering messages from other transceivers
 	update();
@@ -208,6 +219,17 @@ boolean Network::sendMessage(byte toNodeID) {
 		radio.send(BROADCAST, (const void*)(&message), sizeof(message));
 		return( true );
 	}
+
+}
+*/
+void Network::sendMessage(byte toNodeID) {
+	// put check in to make sure we're not clobbering messages from other transceivers
+	update();
+
+	targetNodeID = toNodeID;
+	senderNodeID = myNodeID;
+
+	radio.send(toNodeID, (const void*)(&message), sizeof(message));
 
 }
 

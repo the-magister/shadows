@@ -8,19 +8,136 @@
 #include <WirelessHEX69.h>
 #include <EEPROM.h>
 
-// Shadows specific libraries.  
+#include <FiniteStateMachine.h>
+
+// Shadows specific libraries.
 #include <Network.h>
 #include <Distance.h>
 
-#define CALIBRATION_INTERVAL 60000UL // calibrate every minute if there's nothing going on
+// track our response using a finite state machine
+State Program = State(program); // programmer wants the airwaves
+State Startup = State(startup); // start here
+State Ready = State(ready); // ready to range when it's our turn
+State Range = State(range); // run the range finder
+State Send = State(send); // send the range information
+State Sent = State(sent); // after sending, make sure we hear downstream activity
 
-#define RESEND_INTERVAL 1000UL
+FSM S = FSM(Startup); // start at Startup
 
-systemState lastState;
+// this should be at least the ranging time (~10ms) and sending time (~5ms)
+#define RESEND_INTERVAL 15UL
+Metro resendTimer = Metro(RESEND_INTERVAL);
+
+// this tells us who we receive the potato from, and who we give the potato to
 byte recvFromNodeID, transToNodeID;
-boolean bootstrap = false;
 
-#define IN_PLANE (654U-10U)
+// track the amount of time things take
+unsigned long myTime = 15000;
+unsigned long notMyTime = 2*myTime;
+
+// when the programmer is active, just wait
+void program() {
+  if ( N.state != M_PROGRAM ) S.transitionTo(Startup);
+}
+
+// startup activities
+void startup() {
+
+  // track order for round-robin
+  recvFromNodeID = N.left(N.myNodeID);
+  transToNodeID = N.right(N.myNodeID);
+  Serial << F("Startup.  myNodeID=") << N.myNodeID << F("\trecvFrom=") << recvFromNodeID << F("\t transTo=") << transToNodeID << endl;
+
+  // setup for calibration
+  D.calibrated = false;
+
+  // do I need to get things moving?
+  boolean bootstrap = false;
+  if ( N.myNodeID == 10 ) bootstrap = true; // any node is a candidate for bootstrap responsibilities.  just pick one.
+  Serial << F("Bootstrap responsibility? ") << bootstrap << endl;
+
+  if ( bootstrap ) S.transitionTo( Ready );
+  else S.transitionTo( Range );
+}
+
+// ready to range when it's our turn
+void ready() {
+  // figure out if it's our turn
+  if ( N.senderNodeID == recvFromNodeID ) S.transitionTo( Range );
+}
+
+// range find
+void range() {
+  // visually flag that we've got the potato
+  digitalWrite(LED, HIGH);
+  // and score the amount of time since I gave up the potato
+  notMyTime = (9*notMyTime + elapsedTime())/10; // running average
+  
+  // might need to calibrate
+  if ( ! D.calibrated ) D.calibrate();
+
+  // update distance
+  word dist = D.read();
+
+  // updating the other's distance information so I can relay it with mine.
+  N.decodeMessage(); 
+  Serial << F("Decode Distances:\t") << N.distance[0] << F("\t") << N.distance[1] << F("\t") << N.distance[2] << endl;
+  
+  // record my distance
+  N.distance[N.myIndex] = dist;
+
+  // encode into the message
+  Serial << F("Update Distances:\t") << N.distance[0] << F("\t") << N.distance[1] << F("\t") << N.distance[2] << endl;
+  N.encodeMessage();
+  Serial << F("Encode Distances:\t") << N.distance[0] << F("\t") << N.distance[1] << F("\t") << N.distance[2] << endl;
+
+  // send, now.
+  S.immediateTransitionTo( Send );
+}
+
+// send message
+void send() {
+
+  // send
+  N.sendMessage(transToNodeID);
+
+  // show
+  Serial << F("SEND: "); N.showNetwork();
+
+  // reset the resend timer
+  resendTimer.reset();
+
+  S.immediateTransitionTo( Sent );
+}
+
+// if we hear something fom downstream nodes, go to Ready.
+// if we don't hear something from downstream nodes after an interval, go to Send (resend!)
+void sent() {
+  if ( N.senderNodeID == transToNodeID ) {
+    // visually flag that we don't have the potato
+    digitalWrite(LED, LOW);
+    // and score the amount of time I had the potato
+    myTime = (9*myTime + elapsedTime())/10; // running avergae
+
+    // go to ready
+    S.transitionTo( Ready );
+  } else if ( resendTimer.check() ) {
+    Serial << F("**RESENDING**") << endl;
+    Serial << F("myTime+notMyTime (us)=") << myTime+notMyTime << F(" vs. resend time(us)=") << RESEND_INTERVAL*1000UL << endl;
+    // resend
+    S.immediateTransitionTo( Send );
+  }
+}
+
+unsigned long elapsedTime() {
+  static unsigned long then = micros();
+  unsigned long now = micros();
+  unsigned long delta = now - then;
+
+  Serial << F("Timer elapsed (us)=") << delta << endl;
+  then = now;
+  return ( delta );
+}
 
 void setup() {
   Serial.begin(115200);
@@ -28,15 +145,6 @@ void setup() {
   // start the radio
   N.begin();
 
-  // track order for round-robin
-  recvFromNodeID = N.left(N.myNodeID);
-  transToNodeID = N.right(N.myNodeID);
-  Serial << F("Startup.  myNodeID=") << N.myNodeID << F("\trecvFrom=") << recvFromNodeID << F("\t transTo=") << transToNodeID << endl;
-
-  // do I need to get things moving?
-  if( N.myNodeID == 10 ) bootstrap = true;
-  Serial << F("Bootstrap responsibility? ") << bootstrap << endl;
-  
   // wait enough time to get a reprogram signal
   Metro startupDelay(1000UL);
   while (! startupDelay.check()) N.update();
@@ -46,94 +154,25 @@ void setup() {
 
 }
 
-unsigned long elapsedTime() {
-  static unsigned long then = micros();
-  unsigned long now = micros();
-  unsigned long delta = now - then;
-  then = now;
-  return( delta );
-}
-
 void loop() {
   // update the radio traffic
   boolean haveTraffic = N.update();
-  
-  if( haveTraffic ) {
-    Serial << F("RX: ");
-    N.showNetwork(); 
+
+  // bail out to programming mode immediately
+  if ( N.state == M_PROGRAM ) S.immediateTransitionTo( Program );
+
+  // configure to calibrate once
+  if ( N.state = M_CALIBRATE ) {
+    D.calibrated = false;
+    N.state = M_NORMAL;
   }
 
-  // figure out if we need to act
-  boolean shouldAct = (N.state!=M_PROGRAM) && (haveTraffic) && (N.senderNodeID==recvFromNodeID);
-
-  // do I need to update the position information?
-  if ( shouldAct || bootstrap ) {
-    digitalWrite(LED, HIGH);
-
-/*
-    // if it's good to recalibrate (nothing sensed), do so.
-    static Metro calibrationInterval(CALIBRATION_INTERVAL);
-    if ( N.distance[0] < IN_PLANE || N.distance[1] < IN_PLANE || N.distance[2] < IN_PLANE ) {
-      // something was detected
-      calibrationInterval.reset();
-    }
-    if( calibrationInterval.check() || N.state == M_CALIBRATE ) {
-      D.calibrate();
-      N.state = M_NORMAL;
-    }
-*/
-    // how much time is spent by the other nodes?
-    static unsigned long otherTime = 0;
-    otherTime = (9*otherTime + 1*elapsedTime())/10; // running average
-    
-    // update distance
-    word dist = D.read();
-//    N.distance[N.myIndex] = map(dist, 0, distanceToLEDs, 0, HL); // scale to correct for warp
-
-    N.decodeMessage(); // updating the other's distance information so I can relay it with mine.
-    Serial << F("Decode Distances:\t") << N.distance[0] << F("\t") << N.distance[1] << F("\t") << N.distance[2] << endl;
-    N.distance[N.myIndex] = dist;
-    
-    Serial << F("Update Distances:\t") << N.distance[0] << F("\t") << N.distance[1] << F("\t") << N.distance[2] << endl;
-    N.encodeMessage(); 
-    Serial << F("Encode Distances:\t") << N.distance[0] << F("\t") << N.distance[1] << F("\t") << N.distance[2] << endl;
-   
-    // how much time is spent reading the sensors?
-    static unsigned long sensorTime = 0;
-    sensorTime = (9*sensorTime + 1*elapsedTime())/10; // running average
-    
-    // send
-    boolean haveSent = false;
-    while( ! haveSent ) {
-      Serial << F("Sending...") << endl;
-      haveSent = N.sendMessage(transToNodeID) || N.state==M_PROGRAM;
-    }
-    Serial << F("ACKd.") << endl;
-
-    // how much time is spent by sending data?
-    static unsigned long sendTime = 0;
-    sendTime = (9*sendTime + 1*elapsedTime())/10; // running average
- 
-    // show
-    Serial << F("TX: "); N.showNetwork();
-
-    
-    static byte loopCount = 0;
-    loopCount++;
-    if( loopCount >= 10 ) {
-      loopCount = 0;
-      Serial << F("=== Timers:") << endl;
-      Serial << F("otherTime (us)=") << otherTime << endl;
-      Serial << F("sensorTime (us)=") << sensorTime << endl;
-      Serial << F("sendTime (us)=") << sendTime << endl;
-      Serial << F("===") << endl;
-    }
-
-    // no need to bootstrap
-    bootstrap = false;
-    
-    digitalWrite(LED, LOW);
+  if ( haveTraffic ) {
+    Serial << F("RECV: "); N.showNetwork();
   }
+
+  // update the FSM
+  S.update();
 
 }
 
