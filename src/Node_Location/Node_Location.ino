@@ -15,6 +15,16 @@
 #include <Distance.h>
 
 // track our response using a finite state machine
+/* 
+ *  Startup <- Program 
+ *  \  \
+ *   \  \_ Node 10 _  (nodeID==10 has the special responsibility to bootstrap the Round-Robin)
+ *    \             \
+ *     -> Ready -> Range -> Send -> Sent -\ 
+ *         ^                 ^______|    |
+ *         |_____________________________|
+ * 
+ */
 State Program = State(program); // programmer wants the airwaves
 State Startup = State(startup); // start here
 State Ready = State(ready); // ready to range when it's our turn
@@ -24,8 +34,8 @@ State Sent = State(sent); // after sending, make sure we hear downstream activit
 
 FSM S = FSM(Startup); // start at Startup
 
-// this should be at least the ranging time (~10ms) and sending time (~5ms)
-#define RESEND_INTERVAL 15UL
+// this should be at least the ranging time (~10ms), sending time (~5ms) and a fudge (~2ms)
+#define RESEND_INTERVAL (10+5+2) // ms
 Metro resendTimer = Metro(RESEND_INTERVAL);
 
 // this tells us who we receive the potato from, and who we give the potato to
