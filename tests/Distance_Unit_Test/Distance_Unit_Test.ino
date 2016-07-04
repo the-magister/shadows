@@ -7,7 +7,7 @@ void setup() {
 
   // start the range finder
   D.begin();
-  D.stop();
+  D.calibrate();
 }
 
 unsigned long elapsedTime() {
@@ -28,9 +28,9 @@ void loop() {
   if ( loopCount >= 60 ) {
     loopCount = 0;
     tic = elapsedTime();
-    D.stop();
+    D.calibrate();
     tic = elapsedTime();
-    Serial << F("D.stop() time (us)=") << tic << endl;
+    Serial << F("D.calibrate() time (us)=") << tic << endl;
   }
 
   // update distance

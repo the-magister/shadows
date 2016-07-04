@@ -17,8 +17,11 @@
 
 class Distance {
   public:
-    // initialize sensor and calibrate
+    // initialize sensor 
     void begin();
+
+    // calibrate the sensor
+    void calibrate();
 
     // read distance; returns in*10 to the target (decainches)
     word read();

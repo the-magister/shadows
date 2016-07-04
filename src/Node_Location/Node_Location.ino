@@ -37,7 +37,7 @@ FSM S = FSM(Startup); // start at Startup
 
 // this should be at least the ranging time (~10ms), sending time (~5ms) and a fudge (~2ms)
 // could we just be spamming too fast?
-unsigned long resendInterval = 250UL; // ms
+unsigned long resendInterval = 30UL; // ms
 Metro resendTimer = Metro(resendInterval);
 
 // this tells us who we receive the potato from, and who we give the potato to
@@ -72,8 +72,8 @@ void startup() {
   if ( N.myNodeID == 10 ) bootstrap = true; // any node is a candidate for bootstrap responsibilities.  just pick one.
   Serial << F("Bootstrap responsibility? ") << bootstrap << endl;
 
-  if ( bootstrap ) S.transitionTo( Ready );
-  else S.transitionTo( Range );
+  if ( bootstrap ) S.transitionTo( Range );
+  else S.transitionTo( Ready );
 }
 
 // ready to range when it's our turn
@@ -90,16 +90,16 @@ void range() {
   notMyTime = (9*notMyTime + elapsedTime())/10; // running average
 
   // could the radio be getting in our way?
-  N.radio.sleep();
+//  N.radio.sleep();
   
   // update distance
   word dist = D.read();
-  Serial << F("distance 0=") << dist << endl;
-  // could we just need more time to get a good reading?
-  dist = D.read();
-  Serial << F("distance 1=") << dist << endl;
-  dist = D.read();
-  Serial << F("distance 2=") << dist << endl;
+//  Serial << F("distance 0=") << dist << endl;
+//  // could we just need more time to get a good reading?
+//  dist = D.read();
+//  Serial << F("distance 1=") << dist << endl;
+//  dist = D.read();
+//  Serial << F("distance 2=") << dist << endl;
   
   // updating the other's distance information so I can relay it with mine.
   N.decodeMessage(); 
@@ -110,7 +110,7 @@ void range() {
   Serial << F("set distance= ") << N.distance[N.myIndex] << endl;
   
   // set s so we can tell if all of the nodes are at the same codebase
-  N.s = 3;
+  N.s = 2;
 
   // encode into the message
   N.encodeMessage();
@@ -174,16 +174,29 @@ void setup() {
   // start the radio
   N.begin();
 
+  // start the range finder
+  D.begin();
+
   // wait enough time to get a reprogram signal.
 
   // while we're at it, calibrate and don't clobber each other doing so.
+  unsigned long totalStartupDelay = 1000UL + 3UL*1000UL;
   unsigned long startupDelay = 1000UL + (unsigned long)(N.myIndex)*1000UL; 
-  Serial << F("Startup. delay for calibration (ms)=") << startupDelay << endl;
+  Serial << F("Startup. delay before calibration (ms)=") << startupDelay << endl;
   Metro startupTimer(startupDelay);
+  startupTimer.reset();
   while (! startupTimer.check()) N.update();
 
-  // start the range finder
-  D.begin();
+  digitalWrite(LED, HIGH);
+  D.calibrate();
+  digitalWrite(LED, LOW);
+  
+  // delay for the rest of the time to let the other transceivers power up and calibrate
+  startupDelay = totalStartupDelay-startupDelay;
+  Serial << F("Startup. delay after calibration (ms)=") << startupDelay << endl;
+  startupTimer.interval(startupDelay);
+  startupTimer.reset();
+  while (! startupTimer.check()) N.update();
 
 }
 

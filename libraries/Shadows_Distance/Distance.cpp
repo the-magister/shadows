@@ -3,35 +3,44 @@
 void Distance::begin() {
   Serial << F("Distance.  startup....") << endl;
 
-  // set the pin state before going ahead
-  Serial << F("Distance.  depowering range finder.") << endl;
-  // depower
-  digitalWrite(PIN_VCC, LOW);
-  // stop ranging (could also power the transceiver?  dunno.)
-  digitalWrite(PIN_RX, LOW); // stop ranging
-  // provide ground path
-  digitalWrite(PIN_GND, LOW); 
-  
-  // pin modes
-  pinMode(PIN_RX, OUTPUT);
-  pinMode(PIN_GND, OUTPUT);
-  pinMode(PIN_VCC, OUTPUT);
-  // input for range/distance
   pinMode(PIN_PW, INPUT);
 
+  digitalWrite(PIN_RX, LOW); pinMode(PIN_RX, OUTPUT);
+
+  digitalWrite(PIN_VCC, HIGH); pinMode(PIN_VCC, OUTPUT);
+ 
+  digitalWrite(PIN_GND, LOW); pinMode(PIN_GND, OUTPUT);
+
+  Serial << F("Distance.  startup complete.") << endl;
+
+}
+
+void Distance::calibrate() {
+  Serial << F("Distance.  calibrating range finder...") << endl;
+
+  // depower the MaxSonar
+  digitalWrite(PIN_VCC, LOW);
+
   // wait for depower
-  delay(200);
-  
-  // power the transceiver (if it's not already powered)
+  delay(1000);
+
+  // power the MaxSonar
   digitalWrite(PIN_VCC, HIGH);
 
-  // run the first (calibration) read
-  word dist = this->read();
-  
-  Serial << F("Distance.  calibration reading(cin)=") << dist << endl;
-  
-  Serial << F("Distance.  startup complete.") << endl;
-}
+  // set the range pin to high
+  digitalWrite(PIN_RX, HIGH);
+
+  // wait for calibration; should take about 350 ms
+  delay(350);
+
+  // set the range pin to low
+  digitalWrite(PIN_RX, LOW);
+
+  // wait for another cycle, since we'll likely take a reading immediately hereafter
+  delay(50);
+
+  Serial << F("Location.  calibrated range finder.") << endl;
+ }
 
 word Distance::read() {
 

@@ -39,6 +39,9 @@ void setup() {
   Metro startupDelay(1000UL);
   while (! startupDelay.check()) N.update();
 
+  // start the location subsystem
+  L.begin(N.distance);
+
   // startup animation
   A.begin();
 
@@ -53,9 +56,10 @@ boolean objectInPlane() {
 void loop() {
   // update the radio traffic
   if( N.update() ) {
-    Serial << F("RX: ");
-    N.showNetwork();
-    N.decodeMessage(); // translate distances to altitude and intercept information
+//    Serial << F("RX: ");
+//    N.showNetwork();
+    N.decodeMessage(); // decode the message to distance information
+    L.calculateLocation(); // translate distance to altitude and intercept information
   }
 
   // check for system mode changes
@@ -97,6 +101,8 @@ void idleUpdate() {
 void inPlaneUpdate() {
   // until we get normalized, stay idle
   if ( N.state != M_NORMAL ) return;
+  
+//  Serial << F("L.Cb=") << L.Cb[N.myIndex] << F("\tL.Ch=") << L.Ch[N.myIndex] << endl;
 
   // drive shadow center according to intercept
   A.setCenter(
@@ -110,12 +116,14 @@ void inPlaneUpdate() {
   // drive shadow extent according to range
   A.setExtent(
     map(
-      constrain(L.Ch[N.myIndex], 0, HL),
-      0, HL, // map [0, HL]
+      constrain(L.Ch[N.myIndex], 0, SL),
+      0, SL, // map [0, HL]
       0, NUM_LEDS / 2 // to [0, NUM_LEDS/2]
     )
   );
 
+  return; 
+  
   // check for state changes
   static Metro goIdleTimeout(500UL);
   if ( objectInPlane() ) goIdleTimeout.reset();
