@@ -36,7 +36,8 @@ void sent(); State Sent = State(sent); // after sending, make sure we hear downs
 FSM S = FSM(Startup); // start at Startup
 
 // this should be at least the ranging time (~10ms), sending time (~5ms) and a fudge (~2ms)
-unsigned long resendInterval = 50UL; // ms
+// could we just be spamming too fast?
+unsigned long resendInterval = 250UL; // ms
 Metro resendTimer = Metro(resendInterval);
 
 // this tells us who we receive the potato from, and who we give the potato to
@@ -87,25 +88,34 @@ void range() {
   digitalWrite(LED, HIGH);
   // and score the amount of time since I gave up the potato
   notMyTime = (9*notMyTime + elapsedTime())/10; // running average
+
+  // could the radio be getting in our way?
+  N.radio.sleep();
   
   // update distance
   word dist = D.read();
-
+  Serial << F("distance 0=") << dist << endl;
+  // could we just need more time to get a good reading?
+  dist = D.read();
+  Serial << F("distance 1=") << dist << endl;
+  dist = D.read();
+  Serial << F("distance 2=") << dist << endl;
+  
   // updating the other's distance information so I can relay it with mine.
   N.decodeMessage(); 
   
   // record my distance
   N.distance[N.myIndex] = dist;
 
-  Serial << F("Distance= ") << N.distance[N.myIndex] << endl;
+  Serial << F("set distance= ") << N.distance[N.myIndex] << endl;
   
   // set s so we can tell if all of the nodes are at the same codebase
-  N.s = 1;
+  N.s = 3;
 
   // encode into the message
   N.encodeMessage();
 
-  // send, now.
+  // ready to send.
   S.transitionTo( Send );
 }
 
@@ -163,10 +173,14 @@ void setup() {
 
   // start the radio
   N.begin();
-  
-  // wait enough time to get a reprogram signal
-  Metro startupDelay(1000UL);
-  while (! startupDelay.check()) N.update();
+
+  // wait enough time to get a reprogram signal.
+
+  // while we're at it, calibrate and don't clobber each other doing so.
+  unsigned long startupDelay = 1000UL + (unsigned long)(N.myIndex)*1000UL; 
+  Serial << F("Startup. delay for calibration (ms)=") << startupDelay << endl;
+  Metro startupTimer(startupDelay);
+  while (! startupTimer.check()) N.update();
 
   // start the range finder
   D.begin();
@@ -182,7 +196,8 @@ void loop() {
 
   // configure to calibrate once
   if ( N.state == M_CALIBRATE ) {
-    D.stop();
+    // MGD: TO-DO
+    // D.begin();
     N.state = M_NORMAL;
   }
 

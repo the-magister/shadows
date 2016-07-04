@@ -17,18 +17,12 @@
 
 class Distance {
   public:
-    // initialize sensor in the stopped state
+    // initialize sensor and calibrate
     void begin();
-
-    // stop the sensor, depowering, decalibrated
-    void stop();
 
     // read distance; returns in*10 to the target (decainches)
     word read();
-
-private:
-    boolean calibrated = false;
-    
+  
 };
 
 extern Distance D;

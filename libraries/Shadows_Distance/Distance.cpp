@@ -1,43 +1,39 @@
 #include "Distance.h"
 
 void Distance::begin() {
-  Serial << F("Distance.  startup.") << endl;
+  Serial << F("Distance.  startup....") << endl;
 
   // set the pin state before going ahead
-
-  // stop ranging
-  digitalWrite(PIN_RX, LOW);
-  pinMode(PIN_RX, OUTPUT);
-
-  // provide ground path
-  digitalWrite(PIN_GND, LOW); 
-  pinMode(PIN_GND, OUTPUT);
-
-  // power the transceiver
-  pinMode(PIN_VCC, OUTPUT);
-  digitalWrite(PIN_VCC, HIGH);
-
-  // input for range/distance
-  pinMode(PIN_PW, INPUT);
-
-  Serial << F("Distance.  startup complete.") << endl;
-}
-
-void Distance::stop() {
   Serial << F("Distance.  depowering range finder.") << endl;
   // depower
   digitalWrite(PIN_VCC, LOW);
   // stop ranging (could also power the transceiver?  dunno.)
   digitalWrite(PIN_RX, LOW); // stop ranging
+  // provide ground path
+  digitalWrite(PIN_GND, LOW); 
+  
+  // pin modes
+  pinMode(PIN_RX, OUTPUT);
+  pinMode(PIN_GND, OUTPUT);
+  pinMode(PIN_VCC, OUTPUT);
+  // input for range/distance
+  pinMode(PIN_PW, INPUT);
 
   // wait for depower
-  delay(1000UL);
-}
-
-
-word Distance::read() {
+  delay(200);
+  
   // power the transceiver (if it's not already powered)
   digitalWrite(PIN_VCC, HIGH);
+
+  // run the first (calibration) read
+  word dist = this->read();
+  
+  Serial << F("Distance.  calibration reading(cin)=") << dist << endl;
+  
+  Serial << F("Distance.  startup complete.") << endl;
+}
+
+word Distance::read() {
 
   // record the PW length
   digitalWrite(PIN_RX, HIGH); // range
