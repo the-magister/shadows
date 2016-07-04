@@ -29,7 +29,7 @@ void Network::begin(byte nodeID, byte groupID, byte freq, byte powerLevel) {
 	radio.setPowerLevel(powerLevel);
 	
 	// set the distances to some reasonable default
-	this->distance[0] = this->distance[1] = this->distance[2] = 500;
+	this->distance[0] = this->distance[1] = this->distance[2] = 1023;
 	
 	// get my index
 	this->myIndex = this->myNodeID % 10;
@@ -113,7 +113,7 @@ boolean Network::update() {
 			
 			return( true );
 			
-		} else if( radio.SENDERID == PROGRAMMER_NODE && radio.DATALEN > 30 ) {
+		} else if( radio.SENDERID == PROGRAMMER_NODE && radio.DATALEN > 12 ) {
 			
 			// we need to wait until the airwaves are clear.
 			Serial << F("Network. Programmer traffic.") << endl;

@@ -61,6 +61,7 @@ systemState messageReboot = M_REBOOT;
 
 // sniffing and spoofing
 boolean sniff = false;
+boolean distance = false;
 
 void setup() {
   Serial.begin(115200);
@@ -110,6 +111,9 @@ void loop() {
   } else if (inputLen == 2 && input[0] == 'S' && input[1] == 'N') {
     sniff = ! sniff;
     Serial << F("Sniffing: ") << sniff << endl;
+  } else if (inputLen == 2 && input[0] == 'D' && input[1] == 'I') {
+    distance = ! distance;
+    Serial << F("Distance: ") << distance << endl;
   } else if (inputLen == 2 && input[0] == 'C' && input[1] == 'A') {
     sendMessage(messageCalibrate);   
     Serial << F("[CA]libration operation Message") << endl;
@@ -127,7 +131,8 @@ void loop() {
     Serial << F("[RE]boot programming Message") << endl;
   } else if (inputLen > 0) { //just echo back and provide instructions
     Serial.print("SERIAL IN > "); Serial.println(input);
-    Serial << F("[SN]iff packets (toggles)") << endl;
+    Serial << F("[SN]iff packet contents (toggles)") << endl;
+    Serial << F("[DI]istance information in packets (toggles)") << endl;
     Serial << F("[CA]libration operation Message") << endl;
     Serial << F("[NO]ormal operation Message") << endl;
     Serial << F("[PR]rogramming operation Message") << endl;
@@ -135,20 +140,33 @@ void loop() {
   }
 
   if( N.update() ) {
-    if( sniff ) {
-      N.showNetwork();
+    
+    N.decodeMessage();
+    
+    if( sniff ) N.showNetwork();
+    
+    if( distance ) {
+      Serial << F("Distance:\td0=") << N.distance[0] << F("\td1=") << N.distance[1] << F("\td2=") << N.distance[2] << endl;
+    }
+    
+    static unsigned long cycleTime = 50UL;
+    
+    if( N.senderNodeID == 10 ) {
+      static unsigned long then = millis();
+      unsigned long now = millis();
+      cycleTime = (9*cycleTime + now-then)/10;
+      then = now;
+    }
 
-      if( N.senderNodeID == 10 ) {
-        static unsigned long then = millis();
-        unsigned long now = millis();
-        unsigned long cycleTime = now-then;
-        then = now;
-        Serial << F("Cycle time (ms)=") << cycleTime;
-        Serial << F("\tFrequency (Hz)=") << 1.0/((float)cycleTime/1000.0) << endl;
-      }
+    static byte loopCount = 0;
+    if( loopCount++ >= 100 ) {
+      Serial << F("Cycle time (ms)=") << cycleTime;
+      Serial << F("\tFrequency (Hz)=") << 1.0/((float)cycleTime/1000.0) << endl;      
+      loopCount = 0;
     }
 
     Blink(LED, 5); //heartbeat
+    
   }
 }
 

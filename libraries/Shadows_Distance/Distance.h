@@ -13,19 +13,22 @@
 #define PIN_GND 3   // DC return
 #define PIN_VCC 4   // Vcc in range 3-5.5VDC
 #define PIN_RX  6   // hold high/open for ranging. hold low to stop ranging.
-#define PIN_PW  7   // pulse width representation with scale factor of 140 uS per inch
+#define PIN_PW  7   // pulse width representation with scale factor of 147 uS per inch
 
 class Distance {
   public:
-    // initialize location
+    // initialize sensor in the stopped state
     void begin();
 
-    // calibrate sensor;  should be done periodically to adjust for changing temperature and humidity
-    boolean calibrated = false;
-    void calibrate();
+    // stop the sensor, depowering, decalibrated
+    void stop();
 
-    // read distance
+    // read distance; returns in*10 to the target (decainches)
     word read();
+
+private:
+    boolean calibrated = false;
+    
 };
 
 extern Distance D;

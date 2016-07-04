@@ -25,8 +25,6 @@ void inPlaneUpdate();
 State inPlane = State(inPlaneUpdate); // sensors are picking up an object, and it's within the place of the triangle
 FSM S = FSM(idle); // start idle
 
-#define IN_PLANE HL-50
-
 // track state
 systemState lastState;
 
@@ -86,11 +84,11 @@ void idleUpdate() {
 
   // check for state changes
   static Metro goInPlaneTimeout(500UL);
-  if ( objectInPlane ) goInPlaneTimeout.reset();
+  if ( ! objectInPlane() ) goInPlaneTimeout.reset();
 
   // do we detect something out there?
   if ( goInPlaneTimeout.check() ) {
-    Serial << F("State.  idle->outPlane.") << endl;
+    Serial << F("State.  idle->inPlane.") << endl;
     S.transitionTo( inPlane );
     A.setAnimation( A_INPLANE, false );
   }

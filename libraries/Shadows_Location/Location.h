@@ -10,7 +10,7 @@
 // geometry of the devices, 16-bit
 #define SL			755U // sensor-sensor distance; i.e. side length
 #define HL			654U // sensor-LED distance; i.e. altitude
-#define IN_PLANE	625U // sensor-LED distance threshold for "detected something"
+#define IN_PLANE		625U // sensor-LED distance threshold for "detected something"
 #define LL			720U // LED strip length; 
 
 /*

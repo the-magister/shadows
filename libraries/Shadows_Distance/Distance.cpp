@@ -1,22 +1,43 @@
 #include "Distance.h"
 
 void Distance::begin() {
-  Serial << F("Distance. startup.") << endl;
+  Serial << F("Distance.  startup.") << endl;
 
-  digitalWrite(PIN_GND, LOW); pinMode(PIN_GND, OUTPUT);
+  // set the pin state before going ahead
+
+  // stop ranging
+  digitalWrite(PIN_RX, LOW);
+  pinMode(PIN_RX, OUTPUT);
+
+  // provide ground path
+  digitalWrite(PIN_GND, LOW); 
+  pinMode(PIN_GND, OUTPUT);
+
+  // power the transceiver
+  pinMode(PIN_VCC, OUTPUT);
+  digitalWrite(PIN_VCC, HIGH);
+
+  // input for range/distance
   pinMode(PIN_PW, INPUT);
 
-  digitalWrite(PIN_RX, LOW); pinMode(PIN_RX, OUTPUT);
-
-  digitalWrite(PIN_VCC, HIGH); pinMode(PIN_VCC, OUTPUT);
-
-  this->calibrated = false;
-
-  Serial << F("Distance. startup complete.") << endl;
+  Serial << F("Distance.  startup complete.") << endl;
 }
 
+void Distance::stop() {
+  Serial << F("Distance.  depowering range finder.") << endl;
+  // depower
+  digitalWrite(PIN_VCC, LOW);
+  // stop ranging (could also power the transceiver?  dunno.)
+  digitalWrite(PIN_RX, LOW); // stop ranging
+
+  // wait for depower
+  delay(1000UL);
+}
+
+
 word Distance::read() {
-  if( !this->calibrated ) calibrate();
+  // power the transceiver (if it's not already powered)
+  digitalWrite(PIN_VCC, HIGH);
 
   // record the PW length
   digitalWrite(PIN_RX, HIGH); // range
@@ -29,33 +50,6 @@ word Distance::read() {
   return( centaInches );
 }
 
-void Distance::calibrate() {
-  Serial << F("Location.  calibrating range finder...") << endl;
-
-  // depower the MaxSonar
-  digitalWrite(PIN_VCC, LOW);
-  // set the range pin to high
-  digitalWrite(PIN_RX, HIGH);
-
-  // wait for depower
-  delay(250);
-
-  // power the MaxSonar
-  digitalWrite(PIN_VCC, HIGH);
-
-  // wait for calibration; should take about 250 ms
-  delay(250);
-
-  // set the range pin to low
-  digitalWrite(PIN_RX, LOW);
-
-  // wait for another cycle, since we'll likely take a reading immediately hereafter
-  delay(50);
-
-  this->calibrated = true;
-
-  Serial << F("Location.  calibrated range finder.") << endl;
-}
 
 Distance D;
 
