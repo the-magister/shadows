@@ -39,7 +39,7 @@ void Distance::calibrate() {
   // wait for another cycle, since we'll likely take a reading immediately hereafter
   delay(50);
 
-  Serial << F("Location.  calibrated range finder.") << endl;
+  Serial << F("Distance.  calibrated range finder.") << endl;
  }
 
 word Distance::read() {

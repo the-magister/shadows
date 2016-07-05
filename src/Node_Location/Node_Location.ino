@@ -51,11 +51,12 @@ unsigned long notMyTime = 2*myTime;
 void program() {
   if ( N.state != M_PROGRAM ) S.transitionTo( Startup );
 
-  Metro ledInterval = Metro(500);
-  if( ledInterval.check() ) {
-    static boolean ledState = false;
-    digitalWrite(LED, ledState);
+  static boolean ledState = false;
+  static Metro ledInterval = Metro(500UL);
+  
+  if( ledInterval.check() ) {  
     ledState = ! ledState;
+    digitalWrite(LED, ledState);
   }
 }
 
@@ -70,8 +71,32 @@ void startup() {
   // do I need to get things moving?
   boolean bootstrap = false;
   if ( N.myNodeID == 10 ) bootstrap = true; // any node is a candidate for bootstrap responsibilities.  just pick one.
-  Serial << F("Bootstrap responsibility? ") << bootstrap << endl;
+  Serial << F("Startup.  bootstrap responsibility? ") << bootstrap << endl;
 
+  // calibrate and don't clobber each other while doing so.
+  unsigned long totalStartupDelay = 500UL + 3UL*1000UL;
+  unsigned long startupDelay = 500UL + (unsigned long)(N.myIndex)*1000UL; 
+  Serial << F("Startup.  delay before calibration (ms)=") << startupDelay << endl;
+  Metro startupTimer(startupDelay);
+  startupTimer.reset();
+  while (! startupTimer.check()) N.update();
+
+  // light the LED while we're calibrating as a visual check that we're not clobbering each other
+  digitalWrite(LED, HIGH);
+  D.calibrate();
+  digitalWrite(LED, LOW);
+  
+  // delay for the rest of the time to let the other transceivers power up and calibrate
+  startupDelay = totalStartupDelay-startupDelay;
+  Serial << F("Startup.  delay after calibration (ms)=") << startupDelay << endl;
+  startupTimer.interval(startupDelay);
+  startupTimer.reset();
+  while (! startupTimer.check()) N.update();
+
+  // set state
+  N.state = M_NORMAL;
+
+  // figure out where to start
   if ( bootstrap ) S.transitionTo( Range );
   else S.transitionTo( Ready );
 }
@@ -174,30 +199,12 @@ void setup() {
   // start the radio
   N.begin();
 
+  // wait enough time to get a reprogram signal
+  Metro startupDelay(1000UL);
+  while (! startupDelay.check()) N.update();
+
   // start the range finder
   D.begin();
-
-  // wait enough time to get a reprogram signal.
-
-  // while we're at it, calibrate and don't clobber each other doing so.
-  unsigned long totalStartupDelay = 1000UL + 3UL*1000UL;
-  unsigned long startupDelay = 1000UL + (unsigned long)(N.myIndex)*1000UL; 
-  Serial << F("Startup. delay before calibration (ms)=") << startupDelay << endl;
-  Metro startupTimer(startupDelay);
-  startupTimer.reset();
-  while (! startupTimer.check()) N.update();
-
-  digitalWrite(LED, HIGH);
-  D.calibrate();
-  digitalWrite(LED, LOW);
-  
-  // delay for the rest of the time to let the other transceivers power up and calibrate
-  startupDelay = totalStartupDelay-startupDelay;
-  Serial << F("Startup. delay after calibration (ms)=") << startupDelay << endl;
-  startupTimer.interval(startupDelay);
-  startupTimer.reset();
-  while (! startupTimer.check()) N.update();
-
 }
 
 void loop() {
@@ -208,11 +215,7 @@ void loop() {
   if ( N.state == M_PROGRAM ) S.transitionTo( Program );
 
   // configure to calibrate once
-  if ( N.state == M_CALIBRATE ) {
-    // MGD: TO-DO
-    // D.begin();
-    N.state = M_NORMAL;
-  }
+  if ( N.state == M_CALIBRATE ) S.transitionTo( Startup );
 
   if ( haveTraffic ) {
     Serial << F("RECV: "); N.showNetwork();
