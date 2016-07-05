@@ -10,7 +10,7 @@ require(reshape2)
 BASE_LEN = 720 # length of LED strips (centainches)
 HALF_BASE = 360 # halfway along the LED strip (centainches)
 SENSOR_DIST = 755  # distance between sensors
-HEIGHT_LEN  = 655 # height of the sensor over the LEDs (centainches)
+HEIGHT_LEN  = 654 # height of the sensor over the LEDs (centainches)
 IN_CORNER = 120 # any sensor distance closer than this indicates the object is 
 
 # thetas
@@ -87,21 +87,84 @@ loc.plot = base.plot +
 locDist = d$d
 #locDist = c(6538, 6538, 6538) 
 
+semiPerimiter = function(lI, rI) {
+	floor( 
+		( SENSOR_DIST + locDist[lI] + locDist[rI] ) / 2
+	)
+}
+
+##  https://en.wikipedia.org/wiki/Trilinear_coordinates
+## https://en.wikipedia.org/wiki/Altitude_(triangle)#Altitude_in_terms_of_the_sides
+altitudeHeight = function(locDist) {
+	
+	a = SENSOR_DIST
+	s = c(0,0,0)
+	s[1] = semiPerimiter(2, 3)
+	s[2] = semiPerimiter(3, 1)
+	s[3] = semiPerimiter(1, 2)
+	
+	ret=c(
+		# note: we return actual distances (a',b',c') not x:y:z
+		# a'
+		floor(2/a * round(sqrt(s[1]*(s[1]-locDist[2])))*round(sqrt((s[1]-a)*(s[1]-locDist[3])) ) ),
+		# b' 
+		floor(2/a * round(sqrt(s[2]*(s[2]-locDist[3])))*round(sqrt((s[2]-a)*(s[2]-locDist[1])) ) ),
+		# c'
+		floor(2/a * round(sqrt(s[3]*(s[3]-locDist[1])))*round(sqrt((s[3]-a)*(s[3]-locDist[2])) ) )
+	)
+	ret[is.na(ret)]=0
+	return( ret )
+}
+ah=altitudeHeight(locDist)
+
+# use Vivani's theorem to adjust sum of heights to total altitude
+correctAltitudeHeight = function(ah) {
+
+	# compute the difference in sum of heights from SL
+	deltaAh = HEIGHT_LEN
+	for(i in 1:3) deltaAh = deltaAh - ah[i]
+	
+#	print(ah)
+#	print(deltaAh)
+	
+	# are we done?
+	if( deltaAh == 0 ) return(ah)
+	
+	# what do we do with it?
+	if( deltaAh<3 && deltaAh>-3 ) {
+		# small amount, so finish it
+		if( ah[1] < ah[2] && ah[1] < ah[3] ) { 
+			ah[1] = ah[1] + deltaAh 
+		} else if( ah[2] < ah[1] && ah[2] < ah[3] ) { 
+			ah[2] = ah[2] + deltaAh 
+		} else { 
+			ah[3] = ah[3] + deltaAh
+		}
+
+		return(ah)
+	} else {
+		# dole that difference out equally.
+		addTo = floor(deltaAh/3)
+		for(i in 1:3) ah[i] = ah[i] + addTo
+		
+		# and do this again to grab remainder
+		correctAltitudeHeight(ah)
+	}
+}
+ah=correctAltitudeHeight(ah)
+
 ### notational change functions
 altitudeBase = function(locDist) {
 	# from https://en.wikipedia.org/wiki/Heron%27s_formula#Algebraic_proof_using_the_Pythagorean_theorem
-	ss = SENSOR_DIST*SENSOR_DIST
-	s2 = SENSOR_DIST*2
-	aa=locDist[1]*locDist[1]
-	bb=locDist[2]*locDist[2]
-	cc=locDist[3]*locDist[3]
+	ah = correctAltitudeHeight(altitudeHeight(locDist))
+#	ah = altitudeHeight(locDist)
 	c(
 		# a
-		floor( ((ss+bb)-(cc))/s2 ),
+		round( sqrt( locDist[2]^2 - ah[1]^2 ) ),
 		# b
-		floor( ((ss+cc)-(aa))/s2 ),
+		round( sqrt( locDist[3]^2 - ah[2]^2 ) ),
 		# c
-		floor( ((ss+aa)-(bb))/s2 ) 
+		round( sqrt( locDist[1]^2 - ah[3]^2 ) ) 
 	)
 }
 ab=altitudeBase(locDist)
@@ -116,30 +179,6 @@ soln.ab = edges %>%
 soln.plot = loc.plot +
 	geom_point(data=soln.ab, aes(x=x.ab,y.ab), shape=1, size=4)
 #print(soln.plot)
-	
-##  https://en.wikipedia.org/wiki/Trilinear_coordinates
-altitudeHeight = function(locDist) {
-	# from https://en.wikipedia.org/wiki/Heron%27s_formula#Algebraic_proof_using_the_Pythagorean_theorem
-	d = altitudeBase(locDist)
-	dd = d*d
-	aa=locDist[1]*locDist[1]
-	bb=locDist[2]*locDist[2]
-	cc=locDist[3]*locDist[3]
-	c(
-		# note: we return actual distances (a',b',c') not x:y:z
-		# a'
-		round(ifelse(bb>dd[1], sqrt(bb-dd[1]), 0)),
-		# b' 
-		round(ifelse(cc>dd[2], sqrt(cc-dd[2]), 0)),
-		# c'
-		round(ifelse(aa>dd[3], sqrt(aa-dd[3]), 0))
-	)
-}
-ah=altitudeHeight(locDist)
-deltaAh = round( (HEIGHT_LEN - sum(ah))/2 )
-ah[1] = ifelse(ah[1]==0, deltaAh, ah[1])
-ah[2] = ifelse(ah[2]==0, deltaAh, ah[2])
-ah[3] = ifelse(ah[3]==0, deltaAh, ah[3])
 
 soln.ah = soln.ab %>%
 	mutate(

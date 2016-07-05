@@ -1,5 +1,5 @@
 ### get an example
-source('notation2.R')
+source('notation.R')
 
 # previous calculation to compare back to.
 ab.soln = ab

@@ -7,7 +7,7 @@ Briefly, the lighting will be addressable APA102s defining the perimeter of a eq
 ## Code Layout
 
 * datasheets/ contains the relevant hardware data sheets for complex devices.
-* gateway/WireLessProgramming/  contains the Windows/MacOS wireless programming tools, which allows you to program the light and sensor nodes over-the-air (OTA).
+* gateway/  contains the Windows/MacOS wireless programming tools, which allows you to program the light and sensor nodes over-the-air (OTA).
 * libraries/ contains the relevant Arduino IDE libraries, and includes custom, shared libraries (Shadows_*) shared by both light and sensor nodes.  
 * tests/ unit tests.
 * src/ primary location for gateway, lighting and sensor code.
@@ -28,7 +28,7 @@ The code base is written to avoid floating point operations, choosing to use fix
 
 ### Altitude Notation
 
-The location of the object in the plane in altitude notation is specified (Ab, Ah).  The object's position is given as perpendicular to the side edge and LED strips.  Ab is "altitude base", and is the centainch displacement of the object from the origin of the side.  Ah is "altitude height", and is the centainch displacements of the object from Ab.  Thus, altitude notation expresses the object as a vertex of of right tringle with the sides and LED strips.
+The location of the object in the plane in altitude notation is specified (Ab, Ah).  The object's position is given as perpendicular to the side edge and LED strips.  Ab is "altitude base", and is the centainch displacement of the object from the origin of the side.  Ah is "altitude height", and is the centainch displacements of the object from Ab.  Thus, altitude notation expresses the object as a vertex of a right tringle with the sides and LED strips.
 
 Altitude notation (Ah, in particular) provides trilinear coordinates for the object, which can be converted into barycentric coordinates.  This has a number of strong advantages: these coordinate transforms allow triginometric calculations (read: floating point) to be replaced by algebraic calculations (read: fixed point).  Specifically, the code base used here uses only fixed point squared (X^2) and square root (X^(1/2)) calculations, and positional information is produced in less than 1 ms after receipt.  
 
