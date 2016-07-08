@@ -217,6 +217,8 @@ boolean Network::sendMessage(byte toNodeID) {
 		);
 	} else {
 		radio.send(BROADCAST, (const void*)(&message), sizeof(message));
+		delay(5);
+		radio.send(BROADCAST, (const void*)(&message), sizeof(message));
 		return( true );
 	}
 

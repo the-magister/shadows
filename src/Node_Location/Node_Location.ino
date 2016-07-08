@@ -37,15 +37,14 @@ FSM S = FSM(Startup); // start at Startup
 
 // this should be at least the ranging time (~10ms), sending time (~5ms) and a fudge (~2ms)
 // could we just be spamming too fast?
-unsigned long resendInterval = 30UL; // ms
+unsigned long resendInterval = 20UL; // ms
 Metro resendTimer = Metro(resendInterval);
 
 // this tells us who we receive the potato from, and who we give the potato to
 byte recvFromNodeID, transToNodeID;
 
 // track the amount of time things take
-unsigned long myTime = 15000;
-unsigned long notMyTime = 2*myTime;
+unsigned long handoffTime = 15000;
 
 // while the programmer is active, just wait
 void program() {
@@ -111,8 +110,6 @@ void ready() {
 void range() {
   // visually flag that we've got the potato
   digitalWrite(LED, HIGH);
-  // and score the amount of time since I gave up the potato
-  notMyTime = (9*notMyTime + elapsedTime())/10; // running average
 
   // could the radio be getting in our way?
 //  N.radio.sleep();
@@ -132,7 +129,7 @@ void range() {
   // record my distance
   N.distance[N.myIndex] = dist;
 
-  Serial << F("set distance= ") << N.distance[N.myIndex] << endl;
+//  Serial << F("set distance= ") << N.distance[N.myIndex] << endl;
   
   // set s so we can tell if all of the nodes are at the same codebase
   N.s = 2;
@@ -161,6 +158,9 @@ void send() {
   // reset the resend timer
   resendTimer.reset();
 
+  // and score the amount of time since I gave up the potato
+  elapsedTime();
+
   S.transitionTo( Sent );
 }
 
@@ -171,13 +171,14 @@ void sent() {
     // visually flag that we don't have the potato
     digitalWrite(LED, LOW);
     // and score the amount of time I had the potato
-    myTime = (9*myTime + elapsedTime())/10; // running avergae
+    unsigned long time = elapsedTime();
+    handoffTime = (9*handoffTime + time)/10; // running avergae
+    Serial << F("Handoff time(us)=") << time << F("\taverage(us)=") << handoffTime << endl;
 
     // go to ready
     S.transitionTo( Ready );
   } else if ( resendTimer.check() ) {
     Serial << F("**RESENDING**\t");
-    Serial << F("myTime (us)=") << myTime << F(" vs. resend time(us)=") << resendInterval*1000UL << endl;
     // resend
     S.transitionTo( Send );
   }
@@ -188,7 +189,6 @@ unsigned long elapsedTime() {
   unsigned long now = micros();
   unsigned long delta = now - then;
 
-  Serial << F("Timer elapsed (us)=") << delta << endl;
   then = now;
   return ( delta );
 }
