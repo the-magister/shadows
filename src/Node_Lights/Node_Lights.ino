@@ -25,6 +25,13 @@ void inPlaneUpdate();
 State inPlane = State(inPlaneUpdate); // sensors are picking up an object, and it's within the place of the triangle
 FSM S = FSM(idle); // start idle
 
+// track the average of Ch and Cb
+unsigned long Ch = HL;
+unsigned long Cb = HL;
+byte window = 3; // how many sensor measurements do we average to smooth Cb and Ch?
+// each read is about 17 ms, 
+// so the for three sensors of updates, we're talking ~50ms. 
+
 // track state
 systemState lastState;
 
@@ -60,6 +67,14 @@ void loop() {
 //    N.showNetwork();
     N.decodeMessage(); // decode the message to distance information
     L.calculateLocation(); // translate distance to altitude and intercept information
+
+    // running average
+    Cb = ((window-1)*Cb + L.Cb[N.myIndex])/window;
+    Ch = ((window-1)*Ch + L.Ch[N.myIndex])/window;
+
+//    Serial << F("Cb=") << L.Cb[N.myIndex] << F(" avg=") << Cb;
+//    Serial << F("\tCh=") << L.Ch[N.myIndex] << F(" avg=") << Ch;
+//    Serial << endl;
   }
 
   // check for system mode changes
@@ -107,7 +122,8 @@ void inPlaneUpdate() {
   // drive shadow center according to intercept
   A.setCenter(
     map(
-      constrain(L.Cb[N.myIndex], 0, SL),  // constrain x to be [0, SL]
+//      constrain(L.Cb[N.myIndex], 0, SL),  // constrain x to be [0, SL]
+      constrain(Cb, 0, SL),  // constrain x to be [0, SL]
       0, SL, // map [0, SL]
       0, NUM_LEDS - 1 // to [0, NUM_LEDS-1]
     )
@@ -116,7 +132,8 @@ void inPlaneUpdate() {
   // drive shadow extent according to range
   A.setExtent(
     map(
-      constrain(L.Ch[N.myIndex], 0, SL),
+//      constrain(L.Ch[N.myIndex], 0, SL),
+      constrain(Ch, 0, SL),
       0, SL, // map [0, HL]
       0, NUM_LEDS / 2 // to [0, NUM_LEDS/2]
     )

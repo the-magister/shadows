@@ -63,26 +63,20 @@ void Animation::setExtent(byte extent) {
 
 // runs the animation
 void Animation::update() {
-/*
-  // pre-calculate the next frame
-  static boolean nextFrameReady = false;
-  if ( ! nextFrameReady ) {
-*/
-    
+ 
     // do we need to shift the center of the animation?
     if ( this->currentPosition > this->position ) {
-      this->currentPosition--;
+      this->currentPosition -= (this->currentPosition - this->position)/2 +1;
     } else if ( this->currentPosition < this->position ) {
-      this->currentPosition++;
+      this->currentPosition += (this->position - this->currentPosition)/2 +1;
     }
 
     // do we need to shift the extent of the animation?
     if ( this->currentExtent > this->extent ) {
-      this->currentExtent--;
+      this->currentExtent -= (this->currentExtent - this->extent)/2 +1;
     } else if ( this->currentExtent < this->extent ) {
-      this->currentExtent++;
+      this->currentExtent += (this->extent - this->currentExtent)/2 +1;
     }
-    
     
     switch ( anim ) {
       case A_IDLE:
@@ -106,10 +100,10 @@ void Animation::update() {
 //  if ( pushNextFrame.check() ) {
     FastLED.show(); // push
 
-    static byte pushCount=0;
+    static word pushCount=0;
     pushCount++;
 
-    if( pushCount==100 ) {
+    if( pushCount==1000 ) {
       pushCount = 0;
    
       int repFPS = FastLED.getFPS();
