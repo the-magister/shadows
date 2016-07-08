@@ -57,6 +57,7 @@ void setup() {
 boolean objectInPlane() {
   return(
     N.distance[0] <= IN_PLANE || N.distance[1] <= IN_PLANE || N.distance[2] <= IN_PLANE
+//      true
   );
 }
 
@@ -109,6 +110,7 @@ void idleUpdate() {
   if ( goInPlaneTimeout.check() ) {
     Serial << F("State.  idle->inPlane.") << endl;
     S.transitionTo( inPlane );
+    A.setMasterBrightness( 255 ); // restore brightness
     A.setAnimation( A_INPLANE, false );
   }
 }
@@ -139,8 +141,6 @@ void inPlaneUpdate() {
     )
   );
 
-  return; 
-  
   // check for state changes
   static Metro goIdleTimeout(500UL);
   if ( objectInPlane() ) goIdleTimeout.reset();

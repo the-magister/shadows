@@ -37,7 +37,12 @@ void Animation::setFPS(uint16_t framesPerSecond) {
 void Animation::setMasterBrightness(byte masterBrightness) {
   // set master brightness control
   FastLED.setBrightness(masterBrightness);
-  Serial << F("Animation. Master brightness= ") << masterBrightness << endl;
+
+  static byte lastBright = 0;
+  if( lastBright != masterBrightness ) {
+    Serial << F("Animation. Master brightness= ") << masterBrightness << endl;
+    lastBright = masterBrightness;
+  }
 }
 
 void Animation::setAnimation(byte animation, boolean clearStrip) {
@@ -164,41 +169,62 @@ void Animation::aCylon(byte bright) {
 }
 
 void Animation::aProjection(byte center, byte extent) {
-  // a patch of color
+  // https://github.com/FastLED/FastLED/wiki/Pixel-reference
+  
+  // what are the extents
+  byte more_s = constrain((int)qadd8(center, 1), 0, NUM_LEDS-1);
+  byte more_e = constrain((int)qadd8(more_s, extent), 0, NUM_LEDS-1);
+  byte less_s = constrain((int)qsub8(center, 1), 0, NUM_LEDS-1);
+  byte less_e = constrain((int)qsub8(less_s, extent), 0, NUM_LEDS-1);
 
   // fade everything
-//  fadeToBlackBy( leds, NUM_LEDS, 10 );
+  fadeToBlackBy( leds, NUM_LEDS, 10 );
 
   // clear everything
-  fill_solid( leds, NUM_LEDS, CRGB(0,0,0) );
+//  fill_solid( leds, NUM_LEDS, CRGB(0,0,0) );
+
+  // shift the animation away from the center point
+//  for( byte i=0; i<center; i++ ) { leds[i]=leds[i+1]; }
+//  for( byte i=NUM_LEDS-1; i>center; i-- ) { leds[i]=leds[i-1]; }
+//  memmove8( &leds[more_s], &leds[center], (NUM_LEDS-more_s-1) * sizeof( CRGB) );
+//  memmove8( &leds[less_s], &leds[center], (less_s-0-1) * sizeof( CRGB) );
   
   // cycle through hues
   static byte hue = 0;
   hue++;
 
-  // how far are we diffusing?
-  byte right_s = constrain((int)qadd8(center, 1), 0, NUM_LEDS-1);
-  byte right_e = constrain((int)qadd8(right_s, extent), 0, NUM_LEDS-1);
-  byte left_s = constrain((int)qsub8(center, 1), 0, NUM_LEDS-1);
-  byte left_e = constrain((int)qsub8(left_s, extent), 0, NUM_LEDS-1);
+  // set brightness
+  byte brightness = scale8_video(
+    map(constrain(extent, 0, NUM_LEDS/2), 0, NUM_LEDS/2, 255, 0), 
+    255
+  );
+  this->setMasterBrightness(brightness);
+  
+  CHSV color_start = CHSV(hue, 255, 255);
+  CHSV color_end = CHSV(hue+128, 255, 255);
 
-//  byte brightness = map(constrain(2*extent, 0, NUM_LEDS-1), 0, NUM_LEDS-1, 255, 16); 
+/*
   byte brightness = map(constrain(extent, 0, NUM_LEDS/2), 0, NUM_LEDS/2, 255, 16); 
   for( byte i=left_e;i<=right_e;i++) {
     leds[i] = CHSV(hue, 255, brightness);
-//    leds[i] = CHSV(hue, 255, map(triwave8(map(i,left_e,right_e,0,255)), 0, 255, 0, bright_max) );
   }
-
-  // and show the extents
-  leds[left_e] = CHSV(0, 0, 32);
-  leds[left_s] = CHSV(0, 0, 128);
-  leds[center] = CHSV(0, 0, 255);
-  leds[right_s] = CHSV(0, 0, 128);
-  leds[right_e] = CHSV(0, 0, 32);
+*/
+  // start from right_s and got to right_e
+  fill_gradient( leds, less_s, color_start, less_e, color_end );
+  // start from left_s and got to right_e
+  fill_gradient( leds, more_s, color_start, more_e, color_end );
 
   // blur everything
 //  for( byte i=0; i<extent; i ++ )
 //    blur1d( leds, NUM_LEDS, 128 );
+
+  // show the extents
+  leds[less_e] = CHSV(hue, 255, 32);
+  leds[less_s] = CHSV(hue, 255, 128);
+  leds[center] = CHSV(hue, 255, 255);
+  leds[more_s] = CHSV(hue, 255, 128);
+  leds[more_e] = CHSV(hue, 255, 32);
+
  
 }
 
