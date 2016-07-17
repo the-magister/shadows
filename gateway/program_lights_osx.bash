@@ -14,7 +14,7 @@
 
 ### Find the HEX file
 export HEX_FILE=`ls /var/folders/r*/*/T/build*/Node_Lights.ino.hex`
-if [ -f $HEX_FILE ]
+if [ -e "$HEX_FILE" ]
 then
   echo "Found HEX file at $HEX_FILE"
 else
@@ -24,7 +24,7 @@ fi
 
 ### Find the COM port
 export COM_PORT=`ls /dev/cu.usbserial*`
-if [ -e $COM_PORT ]
+if [ -e "$COM_PORT" ]
 then
 	echo "Found COM port at $COM_PORT"
 else
