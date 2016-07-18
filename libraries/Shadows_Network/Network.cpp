@@ -113,11 +113,15 @@ boolean Network::update() {
 			
 			return( true );
 			
-		} else if( radio.SENDERID == PROGRAMMER_NODE && radio.DATALEN > 12 ) {
-			
-			// we need to wait until the airwaves are clear.
-			Serial << F("Network. Programmer traffic.") << endl;
-			state = M_PROGRAM;
+		} else if( radio.SENDERID == PROGRAMMER_NODE ) {
+			if( radio.DATALEN >= 23 && radio.DATALEN <= 25 ) {
+				if( state != M_PROGRAM ) {
+					Serial << F("Network. Programmer traffic.") << endl;
+					Serial << F("Length=") << radio.DATALEN << endl;	
+					// we need to wait until the airwaves are clear.
+					state = M_PROGRAM;
+				}
+			}
 		}
 	}
 
