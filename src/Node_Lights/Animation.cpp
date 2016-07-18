@@ -85,10 +85,12 @@ void Animation::update() {
     
     switch ( anim ) {
       case A_IDLE:
-        aCylon( 255 );
+//        aCylon( 255 );
+        aFire( 55, 0 );
         break;
       case A_INPLANE:
-        aProjection( this->currentPosition, this->currentExtent );
+//        aProjection( this->currentPosition, this->currentExtent );
+        aFire( this->currentPosition, this->currentExtent );
          break;
       case A_CALIBRATE:
         aSolid( CRGB(0,255,0) );
@@ -234,8 +236,69 @@ void Animation::aSolid(CRGB color) {
   fill_solid(leds, NUM_LEDS, color);
 }
 
+void Animation::aFireIdle() {
+
+//  for ( int pos = 0; pos < NUM_LEDS; k++) {
+//    heat[k] = qsub8( heat[k],  random8(0, cooling));
+//  }
+//
+//  aFire( 55, 0 );
+
+}
+
+void Animation::aFire(byte center, byte extent) {
+
+  const CRGBPalette16 gPal = HeatColors_p;
+  const bool gReverseDirection = false;
+
+  byte leftPos = constrain(center, 0, NUM_LEDS - 1);          //constrain(this->currentPos, 0, NUM_LEDS - 1);
+  byte rightPos = constrain(center, 0, NUM_LEDS - 1);  //constrain(this->currentPos + 1, 0, NUM_LEDS - 1);
+
+  byte cooling = map(this->currentExtent, 0, 255, 30, 10);
+
+  // Array of temperature readings at each simulation cell
+  static byte heat[NUM_LEDS];
+
+  // Step 1.  Cool down every cell a little
+  // Less cooling = taller flames.  More cooling = shorter flames.
+  for ( int k = 0; k < NUM_LEDS; k++) {
+    heat[k] = qsub8( heat[k],  random8(0, cooling));
+  }
+
+  // Step 2.  Heat from each cell drifts left and right and diffuses a little
+  for ( int k = 0; k <= (int)leftPos - 2; k++) {
+    heat[k] = (heat[k + 1] + heat[k + 2] + heat[k + 3] + heat[k + 4] + heat[k + 5] ) / 5;
+  }
+  for ( int k = NUM_LEDS - 1; k >= (int)rightPos - 2; k--) {
+    heat[k] = (heat[k - 1] + heat[k - 2] + heat[k - 3] + heat[k - 4] + heat[k - 5] ) / 5;
+  }
+
+  // Step 3.  Randomly ignite new 'sparks' of heat near center position
+  if ( random8() < 128 ) {
+//    heat[leftPos] = qadd8( heat[leftPos], random8(map(this->currentExtent,0,255,64,255), 255) );
+    heat[leftPos] = qadd8( heat[leftPos], map(this->currentExtent,0,255,128,255) );
+//    heat[rightPos] = qadd8( heat[rightPos], random8(map(this->currentExtent,0,255,64,255), 255)  );
+    heat[rightPos] = qadd8( heat[rightPos], map(this->currentExtent,0,255,128,255) );
+  }
+
+  // Step 4.  Map from heat cells to LED colors
+  for ( int j = 0; j < NUM_LEDS; j++) {
+    // Scale the heat value from 0-255 down to 0-240
+    // for best results with color palettes.
+    CRGB color = ColorFromPalette( gPal, scale8( heat[j]+2, 240));
+    int pixelnumber;
+    if ( gReverseDirection ) {
+      pixelnumber = (NUM_LEDS - 1) - j;
+    }
+    else {
+      pixelnumber = j;
+    }
+    leds[pixelnumber] = color;
+  }
+}
+
 /*
-void Animation::fireAnimation() {
+void Animation::aFireAnimation() {
 
   const CRGBPalette16 gPal = HeatColors_p;
   const bool gReverseDirection = false;

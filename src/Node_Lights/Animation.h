@@ -64,6 +64,8 @@ class Animation {
     void aCylon(byte bright);
     void aProjection(byte pos, byte extent);
     void aSolid(CRGB color);
+    void aFire(byte pos, byte extent);
+    void aFireIdle();
 };
 
 extern Animation A;
