@@ -18,7 +18,7 @@ if [ -e "$HEX_FILE" ]
 then
   echo "Found HEX file at $HEX_FILE"
 else
-	echo "Cannot find HEX file. Exiting."
+	echo "Cannot find HEX file. Please compile Node_Lights in the Arduino IDE and re=run this script. Exiting."
 	exit 1
 fi
 
