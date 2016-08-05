@@ -36,7 +36,7 @@ enum systemState {
 };
 
 // pin definitions common to Moteuinos
-#define LED			9 // Moteinos have LED on D9
+#define LED		9 // Moteinos have LED on D9
 #define FLASH_SS	8 // and FLASH SS on D8
 #define FLASH_ID	0xEF30 // EF30 for windbond 4mbit flash
 
