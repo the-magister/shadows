@@ -254,10 +254,30 @@ void Animation::aFire(byte center, byte extent) {
   byte leftPos = constrain(center, 0, NUM_LEDS - 1);          //constrain(this->currentPos, 0, NUM_LEDS - 1);
   byte rightPos = constrain(center, 0, NUM_LEDS - 1);  //constrain(this->currentPos + 1, 0, NUM_LEDS - 1);
 
-  byte cooling = map(this->currentExtent, 0, 255, 30, 10);
+  byte cooling = map(this->currentExtent, 0, 192, 16, 8);
 
   // Array of temperature readings at each simulation cell
   static byte heat[NUM_LEDS];
+
+//  // Step 2.  Heat from each cell drifts left and right and diffuses a little
+//  for ( int k = 0; k <= (int)leftPos - 2; k++) {
+//    heat[k] = (heat[k + 1] + heat[k + 2] + heat[k + 3] + heat[k + 4] + heat[k + 5] ) / 5;
+////    heat[k] = (heat[k + 1] + heat[k + 2] + heat[k + 3] ) / 3;
+//  }
+//  for ( int k = NUM_LEDS - 1; k >= (int)rightPos - 2; k--) {
+//    heat[k] = (heat[k - 1] + heat[k - 2] + heat[k - 3] + heat[k - 4] + heat[k - 5] ) / 5;
+////    heat[k] = (heat[k - 1] + heat[k - 2] + heat[k - 3] ) / 3;
+//  }
+//
+//
+//  // Step 3.  Randomly ignite new 'sparks' of heat near center position
+//  if ( random8() < 32 ) {
+//    int y = random(16);
+//    heat[leftPos + y] = qadd8( heat[leftPos], random8(map(this->currentExtent,0,255,128,255), 255) );
+////    heat[leftPos] = qadd8( heat[leftPos], map(this->currentExtent,0,255,128,255) );
+//    heat[rightPos - y] = qadd8( heat[rightPos], random8(map(this->currentExtent,0,255,128,255), 255)  );
+////    heat[rightPos] = qadd8( heat[rightPos], map(this->currentExtent,0,255,128,255) );
+//  }
 
   // Step 1.  Cool down every cell a little
   // Less cooling = taller flames.  More cooling = shorter flames.
@@ -267,18 +287,28 @@ void Animation::aFire(byte center, byte extent) {
 
   // Step 2.  Heat from each cell drifts left and right and diffuses a little
   for ( int k = 0; k <= (int)leftPos - 2; k++) {
-    heat[k] = (heat[k + 1] + heat[k + 2] + heat[k + 3] + heat[k + 4] + heat[k + 5] ) / 5;
+    heat[k] = (heat[k + 1] + heat[k + 2] + heat[k + 3] ) / 3;
   }
   for ( int k = NUM_LEDS - 1; k >= (int)rightPos - 2; k--) {
-    heat[k] = (heat[k - 1] + heat[k - 2] + heat[k - 3] + heat[k - 4] + heat[k - 5] ) / 5;
+    heat[k] = (heat[k - 1] + heat[k - 2] + heat[k - 3] ) / 3;
   }
 
   // Step 3.  Randomly ignite new 'sparks' of heat near center position
-  if ( random8() < 128 ) {
+  if ( random8() < 32 ) {
+    int y = random(16);
+
 //    heat[leftPos] = qadd8( heat[leftPos], random8(map(this->currentExtent,0,255,64,255), 255) );
-    heat[leftPos] = qadd8( heat[leftPos], map(this->currentExtent,0,255,128,255) );
+    heat[leftPos - y] = qadd8( heat[leftPos], map(this->currentExtent,0,128,64,64) );
 //    heat[rightPos] = qadd8( heat[rightPos], random8(map(this->currentExtent,0,255,64,255), 255)  );
-    heat[rightPos] = qadd8( heat[rightPos], map(this->currentExtent,0,255,128,255) );
+    heat[rightPos + y] = qadd8( heat[rightPos], map(this->currentExtent,0,128,64,64) );
+  }
+
+  // Step 3.5. Randomly create more central sparks
+  if ( random8() < 64 ) {
+//    heat[leftPos] = qadd8( heat[leftPos], random8(map(this->currentExtent,0,255,64,255), 255) );
+    heat[leftPos] = qadd8( heat[leftPos], map(this->currentExtent,0,192,128,128) );
+//    heat[rightPos] = qadd8( heat[rightPos], random8(map(this->currentExtent,0,255,64,255), 255)  );
+    heat[rightPos] = qadd8( heat[rightPos], map(this->currentExtent,0,192,128,128) );
   }
 
   // Step 4.  Map from heat cells to LED colors
