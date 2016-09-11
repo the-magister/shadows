@@ -48,7 +48,7 @@ fi
 
 ### Push the build
 cp $HEX_FILE Node_Location.hex
-for BOARD_NUMBER in 11
+for BOARD_NUMBER in 10 11 12
 do
   echo "Pushing build to Moteuino $BOARD_NUMBER"
   python WirelessProgramming.py -f Node_Location.hex -s $COM_PORT -t $BOARD_NUMBER 2> program_location_error.log > program_location_output.log
