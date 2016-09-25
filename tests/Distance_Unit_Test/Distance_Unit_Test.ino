@@ -10,13 +10,11 @@ void setup() {
 }
 
 void loop() {
-
   if( D.update() ) {
       for( byte i=0; i<N_RANGE; i++ ) {
-        Serial << F("Sensor=") << i << F("\trange(cin)=") << D.distance[i];
+        Serial << F("S") << i << F(" range(cin)=") << D.distance[i] << F("\t");
       }
       Serial << endl;
       delay(100); // stop spam
   }
-  
 }

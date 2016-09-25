@@ -3,13 +3,19 @@
 void Distance::begin() {
   Serial << F("Distance.  startup....") << endl;
 
+  digitalWrite(PIN_START_RANGE, LOW);
+  pinMode(PIN_START_RANGE, OUTPUT);
+
+//  Timing Description
+// 250mS after power-up, the LV-MaxSonar-EZ is ready to accept the RX command. 
+  delay(300); // delay after power up
+
   // AN Output Constantly Looping:
   // "To start the continuous loop, bring the RX pin high for a time greater than 20us but 
   // less than 48ms and return to ground."
-  digitalWrite(PIN_START_RANGE, LOW);
-  pinMode(PIN_START_RANGE, OUTPUT);
+  
   digitalWrite(PIN_START_RANGE, HIGH);
-  delay(20);
+  delay(5);
   digitalWrite(PIN_START_RANGE, LOW);
   
   Serial << F("Distance.  startup complete.") << endl;
@@ -18,7 +24,7 @@ void Distance::begin() {
 
 boolean Distance::update() {
 
-  unsigned long reading[N_RANGE];
+  word reading[N_RANGE];
   reading[0] = analogRead(PIN_RANGE_1);
   reading[1] = analogRead(PIN_RANGE_2);
   reading[2] = analogRead(PIN_RANGE_3);
@@ -34,20 +40,20 @@ boolean Distance::update() {
   // 5 volts / 1024 units or, .0049 volts (4.9 mV) per unit.
   
   // To Mike's reading, this means a unit of "1" in the analog read is 0.5 in.
-  
-  word newDistance[N_RANGE];
+  // distance [in] = reading [unit] * (5/1024 [volts/unit]) / (5/512 [volts/in])
+  // distance [in] = reading [unit] * (1/2 [in/unit])
   
   // assume the readings haven't changed
   boolean newReading = false;
   
   for( byte i=0; i<N_RANGE; i++ ) {
-    newDistance[i] = reading[i] * 20; // multipling by 2 brings us to inches.  Another 10 brings us to decainches.
+    reading[i] *= 5; // /2 [=] in, *5 [=] centainches
   
-    if( distance[i] != newDistance[i] ) {
+    if( distance[i] != reading[i] ) {
       newReading = true;
     }
 	
-    distance[i] = newDistance[i];
+    distance[i] = reading[i];
 	
   }
   
