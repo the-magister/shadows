@@ -21,9 +21,27 @@
 #define GROUPID				157  // local group
 #define POWERLEVEL			31 // 0-31, 31 being maximal
 
-#define PROGRAMMER_NODE			254 // nodeID of wireless programmer
+#define PROGRAMMER_NODE		254 // nodeID of wireless programmer
 
 #define N_NODES				3 // 3 Lights, 3 Location nodes
+#define N_RANGE				3 // 
+
+// geometry of the devices, 8-bit
+//#define SL			755U // sensor-sensor distance; i.e. side length
+//#define HL			654U // sensor-LED distance; i.e. altitude
+//#define LL			720U // LED strip length;
+#define SL			244U // sensor-sensor distance; i.e. side length
+#define HL			212U // sensor-LED distance; i.e. altitude, ~60"
+#define LL			220U // LED strip length; 
+
+
+// distance information being transmitted
+struct Distances {
+  byte D[N_RANGE]; // object location relative to sensors
+  byte Ab[N_NODES], Ah[N_NODES]; // object location relative to LEDs, altitude basis
+  byte Cb[N_NODES], Ch[N_NODES]; // object location relative to LEDs, collinear basis
+  byte Area[N_NODES]; // relative area of the triangle defined by the object and LEDs, relative to total area.
+};
 
 // system state messages
 enum systemState {
@@ -43,7 +61,7 @@ enum systemState {
 class Network {
   public:
 	// initialize radio
-	void begin(byte nodeID=255, byte groupID=GROUPID, byte freq=RF69_915MHZ, byte powerLevel=POWERLEVEL);
+	void begin(Distances *d, byte nodeID=255, byte groupID=GROUPID, byte freq=RF69_915MHZ, byte powerLevel=POWERLEVEL);
 	// return my node ID
 	byte myNodeID; // 10-12 for Location; 20-22 for Lights
 	// return my index into arrays
@@ -55,26 +73,24 @@ class Network {
 	// check for radio traffic; return true if we have a message or state change
 	boolean update();
 	byte senderNodeID, targetNodeID; // from and to information for message
-	unsigned long message; // message 
-	systemState state; // system state
 	
 	// show the contents of the network information
 	void showNetwork();
 
-	// translate message -> distance
-	byte distance[N_NODES]; // distances from sensors to object
-
 	// send state; returns true if ACKd or toNodeID==BROADCAST
 	void sendState(byte toNodeID=BROADCAST);
-
+	systemState state;
+	
 	// for Node_Location
 	void sendMessage(byte toNodeID=BROADCAST);
 
 	// all of this is conducted over radio
 	RFM69 radio;
+
+  private:
+	
+	Distances *d;
 	
 };
-
-extern Network N;
 
 #endif

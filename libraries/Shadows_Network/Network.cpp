@@ -2,7 +2,7 @@
 
 SPIFlash flash(FLASH_SS, FLASH_ID); 
 
-void Network::begin(byte nodeID, byte groupID, byte freq, byte powerLevel) {
+void Network::begin(Distances *d, byte nodeID, byte groupID, byte freq, byte powerLevel) {
 	Serial << F("Network. startup.") << endl;
 
 	// EEPROM location for radio settings.
@@ -20,7 +20,7 @@ void Network::begin(byte nodeID, byte groupID, byte freq, byte powerLevel) {
 		Serial << F("Enter the node number for this node:") << endl;
 		while( ! Serial.available() );
 		EEPROM.update(radioConfigLocation, Serial.parseInt());
-		return( this->begin(nodeID, groupID, freq, powerLevel) );
+		return( this->begin(d, nodeID, groupID, freq, powerLevel) );
 	}
 
 	radio.initialize(freq, this->myNodeID, groupID);
@@ -28,8 +28,8 @@ void Network::begin(byte nodeID, byte groupID, byte freq, byte powerLevel) {
 	radio.promiscuous(true); // so broadcasts are received
 	radio.setPowerLevel(powerLevel);
 	
-	// set the distances to some reasonable default
-	this->distance[0] = this->distance[1] = this->distance[2] = 210;
+	// link pointer to malloc'd
+	this->d = d;
 	
 	// get my index
 	this->myIndex = this->myNodeID % 10;
@@ -81,10 +81,12 @@ boolean Network::update() {
 		} 
 
 		// check for messages
-		if( radio.DATALEN==sizeof(message) ) {
+		if( radio.DATALEN==sizeof(Distances) ) {
 			
 			// read it
-			message = *(unsigned long*)radio.DATA; 
+			memcpy( (void*)d, (void*)radio.DATA, sizeof(Distances) );
+//			d = (Distances*)radio.DATA;  // might work, but maybe we'd just set a pointer to the radio.DATA which would get overwritten
+//			d = *(Distances*)radio.DATA;  // original; worked
 			targetNodeID = radio.TARGETID;
 			senderNodeID = radio.SENDERID;
 			
@@ -97,7 +99,7 @@ boolean Network::update() {
 		} else if( radio.DATALEN==sizeof(systemState) ) {
 
 			// read it
-			state = *(systemState*)radio.DATA;
+			this->state = *(systemState*)radio.DATA;
 			targetNodeID = radio.TARGETID;
 			senderNodeID = radio.SENDERID;
 
@@ -107,7 +109,7 @@ boolean Network::update() {
 			}
 			
 			// run the reboot commmand right now
-			if( state == M_REBOOT ) {
+			if( this->state == M_REBOOT ) {
 				resetUsingWatchdog(true);
 			}
 			
@@ -115,11 +117,11 @@ boolean Network::update() {
 			
 		} else if( radio.SENDERID == PROGRAMMER_NODE ) {
 			if( radio.DATALEN >= 23 && radio.DATALEN <= 25 ) {
-				if( state != M_PROGRAM ) {
+				if( this->state != M_PROGRAM ) {
 					Serial << F("Network. Programmer traffic.") << endl;
 					Serial << F("Length=") << radio.DATALEN << endl;	
 					// we need to wait until the airwaves are clear.
-					state = M_PROGRAM;
+					this->state = M_PROGRAM;
 				}
 			}
 		}
@@ -132,7 +134,6 @@ boolean Network::update() {
 void Network::showNetwork() {
 	Serial << F("Network. ");
 	Serial << senderNodeID << F("->") << targetNodeID;
-	Serial << F("\tmsg=") << _BIN(message);
 	Serial << F("\tstate=") << state;
 	Serial << endl;
 }
@@ -145,7 +146,7 @@ void Network::sendState(byte toNodeID) {
 	targetNodeID = toNodeID;
 	senderNodeID = myNodeID;
 
-	radio.send(toNodeID, (const void*)(&state), sizeof(state));
+	radio.send(toNodeID, (const void*)(&state), sizeof(systemState));
 }
 
 
@@ -156,8 +157,8 @@ void Network::sendMessage(byte toNodeID) {
 	targetNodeID = toNodeID;
 	senderNodeID = myNodeID;
 
-	radio.send(toNodeID, (const void*)(&message), sizeof(message));
+	radio.send(toNodeID, (const void*)(d), sizeof(Distances));
 
 }
 
-Network N;
+

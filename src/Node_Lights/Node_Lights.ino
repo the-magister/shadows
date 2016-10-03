@@ -13,7 +13,8 @@
 
 // Shadows specific libraries.  
 #include <Network.h>
-#include <Location.h>
+Network N;
+Distances D;
 
 #include "Animation.h"
 
@@ -24,6 +25,8 @@ State idle = State(idleUpdate); // nothing going on
 void inPlaneUpdate();
 State inPlane = State(inPlaneUpdate); // sensors are picking up an object, and it's within the place of the triangle
 FSM S = FSM(idle); // start idle
+
+#define IN_PLANE 200
 
 // track the average of Ch and Cb
 unsigned long Ch = HL;
@@ -40,14 +43,11 @@ void setup() {
   Serial.begin(115200);
 
   // start the radio
-  N.begin();
+  N.begin(&D);
 
   // wait enough time to get a reprogram signal
   Metro startupDelay(1000UL);
   while (! startupDelay.check()) N.update();
-
-  // start the location subsystem
-  L.begin(N.distance);
 
   // startup animation
   A.begin();
@@ -56,7 +56,7 @@ void setup() {
 
 boolean objectInPlane() {
   return(
-    N.distance[0] <= IN_PLANE || N.distance[1] <= IN_PLANE || N.distance[2] <= IN_PLANE
+    D.D[0] <= IN_PLANE || D.D[1] <= IN_PLANE || D.D[2] <= IN_PLANE
 //      true
   );
 }
@@ -64,13 +64,9 @@ boolean objectInPlane() {
 void loop() {
   // update the radio traffic
   if( N.update() ) {
-//    Serial << F("RX: ");
-//    N.showNetwork();
-    L.calculateLocation(); // translate distance to altitude and intercept information
-
     // running average
-    Cb = ((window-1)*Cb + L.Cb[N.myIndex])/window;
-    Ch = ((window-1)*Ch + L.Ch[N.myIndex])/window;
+    Cb = ((window-1)*Cb + D.Cb[N.myIndex])/window;
+    Ch = ((window-1)*Ch + D.Ch[N.myIndex])/window;
 
 //    Serial << F("Cb=") << L.Cb[N.myIndex] << F(" avg=") << Cb;
 //    Serial << F("\tCh=") << L.Ch[N.myIndex] << F(" avg=") << Ch;

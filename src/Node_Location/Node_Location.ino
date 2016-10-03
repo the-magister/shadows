@@ -10,29 +10,44 @@
 
 // Shadows specific libraries.
 #include <Network.h>
-#include <Distance.h>
+Network N;
+Distances D;
+#include "Location.h"
+Location L;
+
+// Moteuino R4 pins already in use:
+//  D2, D10-13 - transceiver
+//  D9         - LED
+//  D8, D11-13 - flash
+
+#define PIN_LED_CLK 3    // corner LED clock line
+#define PIN_LED_DATA 4    // corner LED data line
 
 void setup() {
   Serial.begin(115200);
 
   // start the radio
-  N.begin();
+  N.begin(&D);
 
   // wait enough time to get a reprogram signal
   Metro startupDelay(1000UL);
   while (! startupDelay.check()) N.update();
 
   // start the range finder
-  D.begin();
+  L.begin(&D);
 }
 
 void loop() {
   // update the radio traffic
   boolean haveTraffic = N.update();
+  static Metro backToNormalAfterProgram(5000UL);
+  if( haveTraffic && N.state==M_PROGRAM ) {
+    backToNormalAfterProgram.reset();
+  }
 
   // configure to calibrate once
   if ( N.state == M_CALIBRATE ) {   
-     D.begin();
+     L.begin(&D);
      delay(100);
      N.state = M_NORMAL;
   }
@@ -42,41 +57,16 @@ void loop() {
   }
 
   // average the sensor readings
-  static unsigned long distanceAvg[N_RANGE];
+  L.update();  
 
-  // update distance
-  static Metro nyquistUpdate(1);
-  if( nyquistUpdate.check() ) {
-    if( D.update() ); // let us know, or something.      
-    for( byte i=0; i<N_RANGE; i++ ) {
-      distanceAvg[i] = distanceAvg[i] * 9 + D.distance[i];
-    }
+  // send
+  if( N.state == M_PROGRAM ) {
+    // just don't want to be locked out forever
+    if( backToNormalAfterProgram.check() ) N.state = M_NORMAL;
+    return;
   }
 
   // send
-  static Metro sendInterval(30);
-  if( sendInterval.check() ) {  
+  N.sendMessage();
 
-    if( N.state == M_PROGRAM ) {
-      // just don't want to be locked out forever
-      N.state = M_NORMAL;
-      return;
-    }
-
-    // encode
-    for( byte i=0; i<N_RANGE; i++ ) {
-      N.distance[i] = constrain(distanceAvg[i], 0, 255);
-    }
-    
-    // send
-    N.sendMessage();
-    
-    // show
-    Serial << F("SEND: "); N.showNetwork();
-    
-    // reset the timer
-    sendInterval.reset();
-    
-  } 
 }
-
