@@ -8,10 +8,14 @@
 #define N_NODES		3 // 3 Lights, 3 Location nodes
 
 // geometry of the devices, 16-bit
-#define SL			755U // sensor-sensor distance; i.e. side length
-#define HL			654U // sensor-LED distance; i.e. altitude
-#define IN_PLANE		625U // sensor-LED distance threshold for "detected something"
-#define LL			720U // LED strip length; 
+//#define SL			755U // sensor-sensor distance; i.e. side length
+//#define HL			654U // sensor-LED distance; i.e. altitude
+//#define IN_PLANE	625U // sensor-LED distance threshold for "detected something"
+//#define LL			720U // LED strip length; 
+#define SL			244U // sensor-sensor distance; i.e. side length
+#define HL			212U // sensor-LED distance; i.e. altitude, ~60"
+#define IN_PLANE	200U // sensor-LED distance threshold for "detected something"
+#define LL			220U // LED strip length; 
 
 /*
 Physical layout:
@@ -31,14 +35,7 @@ Tens digit:
 Ones digit (with same tens digit):
   +1 (modulo) = "to my right"/next
   -1 (modulo) = "to my left"/previous
-  
-Ultrasound ring goes clockwise round-robin:
-
-  Rx From	Is Next		Tx To
-  10		11			12
-  11		12			10
-  12		10			11
-  
+   
 */ 
 
 // NOTE: I specifically skipped getter/setter functions to 
@@ -52,7 +49,7 @@ Ultrasound ring goes clockwise round-robin:
 
 class Location {
   public:
-	void begin(word *distance);
+	void begin(byte *distance);
 	// given the distances to the object, calculate the location of the object
 	void calculateLocation();
 	// which sets the following target information
@@ -64,7 +61,7 @@ class Location {
 	byte left(byte i);
 	byte right(byte i);
 	
-	word *distance;
+	byte *distance;
 	
 	// helper functions
 	unsigned long squared(word x);

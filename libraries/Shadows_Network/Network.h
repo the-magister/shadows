@@ -62,20 +62,13 @@ class Network {
 	void showNetwork();
 
 	// translate message -> distance
-	void decodeMessage();
-	word distance[N_NODES]; // distances from sensors to object
-	byte s; // 2 extra bits in message
+	byte distance[N_NODES]; // distances from sensors to object
 
 	// send state; returns true if ACKd or toNodeID==BROADCAST
-//	boolean sendState(byte toNodeID=BROADCAST);
 	void sendState(byte toNodeID=BROADCAST);
 
 	// for Node_Location
-	// translate distance -> message
-	void encodeMessage();
-	// send messsage; returns true if ACKd or toNodeID==BROADCAST
-//	boolean sendMessage(byte toNodeID);
-	void sendMessage(byte toNodeID);
+	void sendMessage(byte toNodeID=BROADCAST);
 
 	// all of this is conducted over radio
 	RFM69 radio;

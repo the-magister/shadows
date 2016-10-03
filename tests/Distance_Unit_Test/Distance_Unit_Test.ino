@@ -13,7 +13,7 @@ void loop() {
  
   if( D.update() ) {
       for( byte i=0; i<N_RANGE; i++ ) {
-        Serial << F("S") << i << F(" range(cin)=") << D.distance[i] << F("\t");
+        Serial << F("S") << i << F(" range(units)=") << D.distance[i] << F("\t");
       }
       Serial << endl;
 
@@ -22,7 +22,7 @@ void loop() {
       
 }
 
-// readings 212
+// readings: 212 ie. 60"
 
 // Analog, (Vcc/512) / inch
 

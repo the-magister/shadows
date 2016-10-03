@@ -29,7 +29,7 @@ void Network::begin(byte nodeID, byte groupID, byte freq, byte powerLevel) {
 	radio.setPowerLevel(powerLevel);
 	
 	// set the distances to some reasonable default
-	this->distance[0] = this->distance[1] = this->distance[2] = 1023;
+	this->distance[0] = this->distance[1] = this->distance[2] = 210;
 	
 	// get my index
 	this->myIndex = this->myNodeID % 10;
@@ -132,50 +132,12 @@ boolean Network::update() {
 void Network::showNetwork() {
 	Serial << F("Network. ");
 	Serial << senderNodeID << F("->") << targetNodeID;
-	Serial << F("\ts=")  << s;
 	Serial << F("\tmsg=") << _BIN(message);
 	Serial << F("\tstate=") << state;
 	Serial << endl;
 }
 
-/*
-message is 32 bits:
-	0-9   = d[1]
-	10-19 = d[2]
-	20-29 = d[3]
-	30-31 = s (two extra MSB)
 
-with 10 bits of information, values up to 1023 are possible.  the maximum
-sensor reading is ~65 inches, so we could transmit decainches (~650 din)
-comfortably.  Importantly, we can use word storage for the decainch data, and cubic 
-operations would still fit in unsigned long (32 bits).
-*/
-
-void Network::decodeMessage() {
-	this->s = this->message & 3UL; // dumping 30 MSB
-	this->distance[0] = (this->message >>  2) & 1023UL; // dumping six MSB
-	this->distance[1] = (this->message >> 12) & 1023UL; // dumping six MSB
-	this->distance[2] = (this->message >> 22) & 1023UL; // dumping six MSB
-}
-
-/*
-boolean Network::sendState(byte toNodeID) {
-	// put check in to make sure we're not clobbering messages from other transceivers
-	update();
-
-	targetNodeID = toNodeID;
-	senderNodeID = myNodeID;
-
-	if( toNodeID != BROADCAST ) {
-		return( 
-			radio.sendWithRetry(toNodeID, (const void*)(&state), sizeof(state), 3, 10)
-		);
-	} else {
-		radio.send(BROADCAST, (const void*)(&state), sizeof(state));
-		return( true );
-	}
-}
-*/
 void Network::sendState(byte toNodeID) {
 	// put check in to make sure we're not clobbering messages from other transceivers
 	update();
@@ -186,48 +148,7 @@ void Network::sendState(byte toNodeID) {
 	radio.send(toNodeID, (const void*)(&state), sizeof(state));
 }
 
-void Network::encodeMessage() {
 
-	this->message = 0;
-	
-	this->message |= this->distance[2] & 1023UL;
-	this->message = this->message << 10;
-//	Serial.println(this->message, BIN);
-	
-	this->message |= this->distance[1] & 1023UL;
-	this->message = this->message << 10;
-//	Serial.println(this->message, BIN);
-	
-	this->message |= this->distance[0] & 1023UL;
-	this->message = this->message << 2;
-//	Serial.println(this->message, BIN);
-
-	this->message |= this->s & 3UL;
-//	Serial.println(this->message, BIN);
-	
-}
-
-/*
-boolean Network::sendMessage(byte toNodeID) {
-	// put check in to make sure we're not clobbering messages from other transceivers
-	update();
-
-	targetNodeID = toNodeID;
-	senderNodeID = myNodeID;
-
-	if( toNodeID != BROADCAST ) {
-		return( 
-			radio.sendWithRetry(toNodeID, (const void*)(&message), sizeof(message), 3, 10)
-		);
-	} else {
-		radio.send(BROADCAST, (const void*)(&message), sizeof(message));
-		delay(5);
-		radio.send(BROADCAST, (const void*)(&message), sizeof(message));
-		return( true );
-	}
-
-}
-*/
 void Network::sendMessage(byte toNodeID) {
 	// put check in to make sure we're not clobbering messages from other transceivers
 	update();

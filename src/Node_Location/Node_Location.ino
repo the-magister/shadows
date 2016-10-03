@@ -8,190 +8,9 @@
 #include <WirelessHEX69.h>
 #include <EEPROM.h>
 
-#include <FiniteStateMachine.h>
-
 // Shadows specific libraries.
 #include <Network.h>
 #include <Distance.h>
-
-// track our response using a finite state machine
-/* 
- *  Startup <- Program 
- *  \  \
- *   \  \_ Node 10 _  (nodeID==10 has the special responsibility to bootstrap the Round-Robin)
- *    \             \
- *     -> Ready -> Range -> Send -> Sent -\ 
- *         ^                 ^______|    |
- *         |_____________________________|
- * 
- */
-
-void program(); State Program = State(program); // programmer wants the airwaves
-void startup(); State Startup = State(startup); // start here
-void ready(); State Ready = State(ready); // ready to range when it's our turn
-void range(); State Range = State(range); // run the range finder
-void send(); State Send = State(send); // send the range information
-void sent(); State Sent = State(sent); // after sending, make sure we hear downstream activity
-
-FSM S = FSM(Startup); // start at Startup
-
-// this should be at least the ranging time (~10ms), sending time (~5ms) and a fudge (~2ms)
-// could we just be spamming too fast?
-unsigned long resendInterval = 20UL; // ms
-Metro resendTimer = Metro(resendInterval);
-
-// this tells us who we receive the potato from, and who we give the potato to
-byte recvFromNodeID, transToNodeID;
-
-// track the amount of time things take
-unsigned long handoffTime = 15000;
-
-// while the programmer is active, just wait
-void program() {
-  if ( N.state != M_PROGRAM ) S.transitionTo( Startup );
-
-  static boolean ledState = false;
-  static Metro ledInterval = Metro(500UL);
-  
-  if( ledInterval.check() ) {  
-    ledState = ! ledState;
-    digitalWrite(LED, ledState);
-  }
-}
-
-// startup activities
-void startup() {
-
-  // track order for round-robin
-  recvFromNodeID = N.left(N.myNodeID);
-  transToNodeID = N.right(N.myNodeID);
-  Serial << F("Startup.  myNodeID=") << N.myNodeID << F("\trecvFrom=") << recvFromNodeID << F("\t transTo=") << transToNodeID << endl;
-
-  // do I need to get things moving?
-  boolean bootstrap = false;
-  if ( N.myNodeID == 10 ) bootstrap = true; // any node is a candidate for bootstrap responsibilities.  just pick one.
-  Serial << F("Startup.  bootstrap responsibility? ") << bootstrap << endl;
-
-  // calibrate and don't clobber each other while doing so.
-  unsigned long totalStartupDelay = 500UL + 3UL*1000UL;
-  unsigned long startupDelay = 500UL + (unsigned long)(N.myIndex)*1000UL; 
-  Serial << F("Startup.  delay before calibration (ms)=") << startupDelay << endl;
-  Metro startupTimer(startupDelay);
-  startupTimer.reset();
-  while (! startupTimer.check()) N.update();
-
-  // light the LED while we're calibrating as a visual check that we're not clobbering each other
-  digitalWrite(LED, HIGH);
-  D.calibrate();
-  digitalWrite(LED, LOW);
-  
-  // delay for the rest of the time to let the other transceivers power up and calibrate
-  startupDelay = totalStartupDelay-startupDelay;
-  Serial << F("Startup.  delay after calibration (ms)=") << startupDelay << endl;
-  startupTimer.interval(startupDelay);
-  startupTimer.reset();
-  while (! startupTimer.check()) N.update();
-
-  // set state
-  N.state = M_NORMAL;
-
-  // figure out where to start
-  if ( bootstrap ) S.transitionTo( Range );
-  else S.transitionTo( Ready );
-}
-
-// ready to range when it's our turn
-void ready() {
-  // figure out if it's our turn
-  if ( N.senderNodeID == recvFromNodeID ) S.transitionTo( Range );
-}
-
-// range find
-void range() {
-  // visually flag that we've got the potato
-  digitalWrite(LED, HIGH);
-
-  // could the radio be getting in our way?
-//  N.radio.sleep();
-  
-  // update distance
-  word dist = D.read();
-//  Serial << F("distance 0=") << dist << endl;
-//  // could we just need more time to get a good reading?
-//  dist = D.read();
-//  Serial << F("distance 1=") << dist << endl;
-//  dist = D.read();
-//  Serial << F("distance 2=") << dist << endl;
-  
-  // updating the other's distance information so I can relay it with mine.
-  N.decodeMessage(); 
-  
-  // record my distance
-  N.distance[N.myIndex] = dist;
-
-//  Serial << F("set distance= ") << N.distance[N.myIndex] << endl;
-  
-  // set s so we can tell if all of the nodes are at the same codebase
-  N.s = 2;
-
-  // encode into the message
-  N.encodeMessage();
-
-  // ready to send.
-  S.transitionTo( Send );
-}
-
-// send message
-void send() {
-  // bail out to programming mode immediately
-  if ( N.state == M_PROGRAM ) {
-    S.transitionTo( Program );
-    return;
-  }
-
-  // send
-  N.sendMessage(transToNodeID);
-
-  // show
-  Serial << F("SEND: "); N.showNetwork();
-
-  // reset the resend timer
-  resendTimer.reset();
-
-  // and score the amount of time since I gave up the potato
-  elapsedTime();
-
-  S.transitionTo( Sent );
-}
-
-// if we hear something fom downstream nodes, go to Ready.
-// if we don't hear something from downstream nodes after an interval, go to Send (resend!)
-void sent() {
-  if ( N.senderNodeID == transToNodeID ) {
-    // visually flag that we don't have the potato
-    digitalWrite(LED, LOW);
-    // and score the amount of time I had the potato
-    unsigned long time = elapsedTime();
-    handoffTime = (9*handoffTime + time)/10; // running avergae
-    Serial << F("Handoff time(us)=") << time << F("\taverage(us)=") << handoffTime << endl;
-
-    // go to ready
-    S.transitionTo( Ready );
-  } else if ( resendTimer.check() ) {
-    Serial << F("**RESENDING**\t");
-    // resend
-    S.transitionTo( Send );
-  }
-}
-
-unsigned long elapsedTime() {
-  static unsigned long then = micros();
-  unsigned long now = micros();
-  unsigned long delta = now - then;
-
-  then = now;
-  return ( delta );
-}
 
 void setup() {
   Serial.begin(115200);
@@ -211,18 +30,53 @@ void loop() {
   // update the radio traffic
   boolean haveTraffic = N.update();
 
-  // bail out to programming mode immediately
-  if ( N.state == M_PROGRAM ) S.transitionTo( Program );
-
   // configure to calibrate once
-  if ( N.state == M_CALIBRATE ) S.transitionTo( Startup );
+  if ( N.state == M_CALIBRATE ) {   
+     D.begin();
+     delay(100);
+     N.state = M_NORMAL;
+  }
 
   if ( haveTraffic ) {
     Serial << F("RECV: "); N.showNetwork();
   }
 
-  // update the FSM
-  S.update();
+  // average the sensor readings
+  static unsigned long distanceAvg[N_RANGE];
 
+  // update distance
+  static Metro nyquistUpdate(1);
+  if( nyquistUpdate.check() ) {
+    if( D.update() ); // let us know, or something.      
+    for( byte i=0; i<N_RANGE; i++ ) {
+      distanceAvg[i] = distanceAvg[i] * 9 + D.distance[i];
+    }
+  }
+
+  // send
+  static Metro sendInterval(30);
+  if( sendInterval.check() ) {  
+
+    if( N.state == M_PROGRAM ) {
+      // just don't want to be locked out forever
+      N.state = M_NORMAL;
+      return;
+    }
+
+    // encode
+    for( byte i=0; i<N_RANGE; i++ ) {
+      N.distance[i] = constrain(distanceAvg[i], 0, 255);
+    }
+    
+    // send
+    N.sendMessage();
+    
+    // show
+    Serial << F("SEND: "); N.showNetwork();
+    
+    // reset the timer
+    sendInterval.reset();
+    
+  } 
 }
 

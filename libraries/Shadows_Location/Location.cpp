@@ -1,6 +1,6 @@
 #include "Location.h"
 
-void Location::begin(word *distance) {
+void Location::begin(byte *distance) {
 	Serial << F("Location. startup.");
 	this->distance = distance;
 	Serial << F("\td0=") << this->distance[0];
@@ -24,7 +24,6 @@ void Location::calculateLocation() {
 	
 	// altitude base.  the distance of the triangle's altitude along the side length.
 	for(byte i=0; i<N_NODES; i++) Ab[i] = altitudeBase(i);
-	
 	
 	// from here, we want to know the location on the side length that is
 	// collinear with the opposite sensor and the object. that is, a 

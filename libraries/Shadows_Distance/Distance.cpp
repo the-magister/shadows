@@ -49,14 +49,16 @@ boolean Distance::update() {
   boolean newReading = false;
   
   for( byte i=0; i<N_RANGE; i++ ) {
-    reading[i] *= 10; // magic number
-    reading[i] /= 3; // magic number
-  
-    if( distance[i] != reading[i] ) {
+//    reading[i] *= 10; // magic number
+//   reading[i] /= 3; // magic number
+    
+	// perhaps magic numbers of 5 and 2?
+	
+    if( distance[i] != constrain(reading[i], 0, 255) ) {
       newReading = true;
     }
 	
-    distance[i] = reading[i];
+    distance[i] = constrain(reading[i], 0, 255);
 	
   }
   

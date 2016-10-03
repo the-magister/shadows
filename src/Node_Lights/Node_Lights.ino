@@ -66,7 +66,6 @@ void loop() {
   if( N.update() ) {
 //    Serial << F("RX: ");
 //    N.showNetwork();
-    N.decodeMessage(); // decode the message to distance information
     L.calculateLocation(); // translate distance to altitude and intercept information
 
     // running average
