@@ -13,7 +13,7 @@
 #define PIN_LED_CLK 3		// corner LED clock line
 #define PIN_LED_DATA 4		// corner LED data line
 #define PIN_START_RANGE 5	// trigger for ranging start
-#define PIN_RANGE_1 5		// range from sonar 1; note this is A5
+#define PIN_RANGE_1 7		// range from sonar 1; note this is A5
 #define PIN_RANGE_2 5		// range from sonar 1; note this is A6
 #define PIN_RANGE_3 6		// range from sonar 1; note this is A7
 

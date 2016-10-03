@@ -1,7 +1,7 @@
 #include "FastLED.h"
 
 // How many leds in your strip?
-#define NUM_LEDS 1
+#define NUM_LEDS 47
 
 // For led chips like Neopixels, which have a data line, ground, and power, you just
 // need to define DATA_PIN.  For led chipsets that are SPI based (four wires - data, clock,
@@ -20,7 +20,7 @@ void setup() {
       // FastLED.addLeds<WS2811, DATA_PIN, RGB>(leds, NUM_LEDS);
       // FastLED.addLeds<WS2812, DATA_PIN, RGB>(leds, NUM_LEDS);
       // FastLED.addLeds<WS2812B, DATA_PIN, RGB>(leds, NUM_LEDS);
-//  	  FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
+      // FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
       // FastLED.addLeds<APA104, DATA_PIN, RGB>(leds, NUM_LEDS);
       // FastLED.addLeds<UCS1903, DATA_PIN, RGB>(leds, NUM_LEDS);
       // FastLED.addLeds<UCS1903B, DATA_PIN, RGB>(leds, NUM_LEDS);
@@ -34,8 +34,8 @@ void setup() {
       // FastLED.addLeds<APA102, RGB>(leds, NUM_LEDS);
       // FastLED.addLeds<DOTSTAR, RGB>(leds, NUM_LEDS);
 
-      FastLED.addLeds<WS2801, DATA_PIN, CLOCK_PIN, RGB>(leds, NUM_LEDS);
-      // FastLED.addLeds<SM16716, DATA_PIN, CLOCK_PIN, RGB>(leds, NUM_LEDS);
+//      FastLED.addLeds<WS2801, DATA_PIN, CLOCK_PIN, RGB>(leds, NUM_LEDS);
+       FastLED.addLeds<SM16716, DATA_PIN, CLOCK_PIN, RGB>(leds, NUM_LEDS);
       // FastLED.addLeds<LPD8806, DATA_PIN, CLOCK_PIN, RGB>(leds, NUM_LEDS);
       // FastLED.addLeds<P9813, DATA_PIN, CLOCK_PIN, RGB>(leds, NUM_LEDS);
       // FastLED.addLeds<APA102, DATA_PIN, CLOCK_PIN, RGB>(leds, NUM_LEDS);
@@ -44,11 +44,27 @@ void setup() {
 
 void loop() { 
   // Turn the LED on, then pause
-  leds[0] = CRGB::Red;
+  fill_solid( leds, NUM_LEDS, CRGB::Blue );
+//  leds[0] = CRGB::Blue;
   FastLED.show();
   delay(500);
+
+  // Turn the LED on, then pause
+  fill_solid( leds, NUM_LEDS, CRGB::Green );
+//  leds[0] = CRGB::Blue;
+  FastLED.show();
+  delay(500);
+
+  // Turn the LED on, then pause
+  fill_solid( leds, NUM_LEDS, CRGB::Red );
+//  leds[0] = CRGB::Blue;
+  FastLED.show();
+  delay(500);
+
+  
   // Now turn the LED off, then pause
-  leds[0] = CRGB::Black;
+  fill_solid( leds, NUM_LEDS, CRGB::Black );
+//  leds[0] = CRGB::Black;
   FastLED.show();
   delay(500);
 }

@@ -8,15 +8,17 @@ void Distance::begin() {
 
 //  Timing Description
 // 250mS after power-up, the LV-MaxSonar-EZ is ready to accept the RX command. 
-  delay(300); // delay after power up
+  delay(500); // delay after power up
 
   // AN Output Constantly Looping:
   // "To start the continuous loop, bring the RX pin high for a time greater than 20us but 
   // less than 48ms and return to ground."
   
   digitalWrite(PIN_START_RANGE, HIGH);
-  delay(5);
+  delay(10);
   digitalWrite(PIN_START_RANGE, LOW);
+  
+  pinMode(PIN_START_RANGE, INPUT); // flip to high-impediance pin state so as to not clobber the return round-robin inc.
   
   Serial << F("Distance.  startup complete.") << endl;
 }
@@ -47,7 +49,8 @@ boolean Distance::update() {
   boolean newReading = false;
   
   for( byte i=0; i<N_RANGE; i++ ) {
-    reading[i] *= 5; // /2 [=] in, *5 [=] centainches
+    reading[i] *= 10; // magic number
+    reading[i] /= 3; // magic number
   
     if( distance[i] != reading[i] ) {
       newReading = true;
