@@ -31,7 +31,7 @@
 //#define HL			654U // sensor-LED distance; i.e. altitude
 //#define LL			720U // LED strip length;
 #define SL			244U // sensor-sensor distance; i.e. side length
-#define HL			212U // sensor-LED distance; i.e. altitude, ~60"
+#define HL			215U // sensor-LED distance; i.e. altitude, ~60"
 #define LL			220U // LED strip length; 
 
 

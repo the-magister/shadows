@@ -23,6 +23,13 @@ Location L;
 #define PIN_LED_CLK 3    // corner LED clock line
 #define PIN_LED_DATA 4    // corner LED data line
 
+#define DEBUG_UPDATE 0
+#define DEBUG_DISTANCE 1
+#define DEBUG_ALTITUDE 0
+#define DEBUG_COLLINEAR 0
+#define DEBUG_AREA 0
+#define DEBUG_INTERVAL 0
+
 void setup() {
   Serial.begin(115200);
 
@@ -69,4 +76,32 @@ void loop() {
   // send
   N.sendMessage();
 
+  if( DEBUG_DISTANCE ) {
+    for ( byte i = 0; i < N_RANGE; i++ ) {
+      Serial << F("S") << i << F(" range(units)=") << D.D[i] << F("\t");
+    }
+    Serial << endl;
+  }
+
+  if( DEBUG_ALTITUDE ) {
+    for ( byte i = 0; i < N_NODES; i++ ) {
+      Serial << F("N") << i << F(" Ab=") << D.Ab[i] << F("\t") << F("Ah=") << D.Ah[i] << F("\t\t");
+    }
+    Serial << endl;
+  }
+  
+  if( DEBUG_COLLINEAR ) {
+    for ( byte i = 0; i < N_NODES; i++ ) {
+      Serial << F("N") << i << F(" Cb=") << D.Cb[i] << F("\t") << F("Ch=") << D.Ch[i] << F("\t\t");
+    }
+    Serial << endl;
+  }
+
+  if( DEBUG_AREA ) {
+    for ( byte i = 0; i < N_NODES; i++ ) {
+      Serial << F("N") << i << F(" Area=") << D.Area[i] << F("\t\t");
+    }
+    Serial << endl;
+  }
+  
 }

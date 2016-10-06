@@ -45,6 +45,8 @@
 #include <Metro.h>
 #include <EEPROM.h>
 #include <Network.h>
+Network N;
+Distances D;
 
 #define ACK_TIME    100  // # of ms to wait for an ack
 #define TIMEOUT     3000
@@ -66,7 +68,7 @@ boolean distance = false;
 void setup() {
   Serial.begin(115200);
 
-  N.begin(PROGRAMMER_NODE);
+  N.begin(&D, PROGRAMMER_NODE);
  
   Serial.println("Start wireless gateway...");
 }
@@ -141,12 +143,10 @@ void loop() {
 
   if( N.update() ) {
     
-    N.decodeMessage();
-    
     if( sniff ) N.showNetwork();
     
     if( distance ) {
-      Serial << F("Distance:\td0=") << N.distance[0] << F("\td1=") << N.distance[1] << F("\td2=") << N.distance[2] << endl;
+      Serial << F("Distance:\td0=") << D.D[0] << F("\td1=") << D.D[1] << F("\td2=") << D.D[2] << endl;
     }
     
     static unsigned long cycleTime = 50UL;
