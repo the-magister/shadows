@@ -1,6 +1,7 @@
 #include <Streaming.h>
 #include <Metro.h>
-
+#include <wavTrigger.h>
+#include <SoftwareSerial.h>
 #include <RFM69.h> // RFM69HW radio transmitter module
 #include <SPI.h> // for radio board 
 #include <SPIFlash.h>
@@ -15,6 +16,10 @@ Distances D;
 #include "Location.h"
 Location L;
 
+#include "Sound.h"
+SoftwareSerial wavSerial(WAVE_TX, WAVE_RX);
+Sound S;
+
 // Moteuino R4 pins already in use:
 //  D2, D10-13 - transceiver
 //  D9         - LED
@@ -24,7 +29,7 @@ Location L;
 #define PIN_LED_DATA 4    // corner LED data line
 
 #define DEBUG_UPDATE 0
-#define DEBUG_DISTANCE 1
+#define DEBUG_DISTANCE 0
 #define DEBUG_ALTITUDE 0
 #define DEBUG_COLLINEAR 0
 #define DEBUG_AREA 0
@@ -42,6 +47,10 @@ void setup() {
 
   // start the range finder
   L.begin(&D);
+
+  // start the sound
+  S.begin(&D, &wavSerial);
+
 }
 
 void loop() {
@@ -76,6 +85,9 @@ void loop() {
   // send
   N.sendMessage();
 
+  // update sound
+  S.update();
+
   if( DEBUG_DISTANCE ) {
     for ( byte i = 0; i < N_RANGE; i++ ) {
       Serial << F("S") << i << F(" range(units)=") << D.D[i] << F("\t");
@@ -103,5 +115,6 @@ void loop() {
     }
     Serial << endl;
   }
-  
+
+  delay(20);
 }

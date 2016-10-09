@@ -14,10 +14,10 @@
 #include <Network.h>
 Distances D;
 
-#define WAVE_RX 6 // Connect pin 6 to WAV Trigger RX
-#define WAVE_TX 7 // Connect pin 7 to WAV Trigger TX
+#define WAVE_RX 7 // Connect pin 7 to WAV Trigger RX
+#define WAVE_TX 6 // Connect pin 6 to WAV Trigger TX
 // make sure they share a Ground plane
-SoftwareSerial wavSerial(WAVE_RX, WAVE_TX); // RX, TX
+SoftwareSerial wavSerial(WAVE_TX, WAVE_RX); 
 
 class Sound {
   public:
