@@ -28,7 +28,7 @@ Sound S;
 
 #define LED_TYPE WS2801
 #define COLOR_ORDER RGB
-#define NUM_LEDS_PER_CORNER 4
+#define NUM_LEDS_PER_CORNER 2
 #define NUM_LEDS NUM_LEDS_PER_CORNER*N_RANGE
 CRGB leds[NUM_LEDS];
 const byte cornerIndex[N_RANGE] = {0, NUM_LEDS_PER_CORNER, NUM_LEDS_PER_CORNER*2};
@@ -111,8 +111,8 @@ void loop() {
     // assign value from distance
     byte distance = constrain(D.D[i], 0, HL);
     for( byte j=0; j<NUM_LEDS_PER_CORNER; j++ ) {
-      leds[i*NUM_LEDS_PER_CORNER+j] = seg;
-      leds[i*NUM_LEDS_PER_CORNER+j].fadeLightBy( distance );
+      leds[cornerIndex[i]+j] = seg;
+      leds[cornerIndex[i]+j].fadeLightBy( distance );
     }
   }
   FastLED.show();
