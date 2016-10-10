@@ -8,6 +8,7 @@
 #include <avr/wdt.h>
 #include <WirelessHEX69.h>
 #include <EEPROM.h>
+#include <FastLED.h>
 
 // Shadows specific libraries.
 #include <Network.h>
@@ -25,8 +26,17 @@ Sound S;
 //  D9         - LED
 //  D8, D11-13 - flash
 
+#define LED_TYPE WS2801
+#define COLOR_ORDER RGB
+#define NUM_LEDS_PER_CORNER 4
+#define NUM_LEDS NUM_LEDS_PER_CORNER*N_RANGE
+CRGB leds[NUM_LEDS];
+const byte cornerIndex[N_RANGE] = {0, NUM_LEDS_PER_CORNER, NUM_LEDS_PER_CORNER*2};
 #define PIN_LED_CLK 3    // corner LED clock line
 #define PIN_LED_DATA 4    // corner LED data line
+// color correction options; see FastLED/color.h
+// #define COLOR_CORRECTION TypicalLEDStrip
+#define COLOR_CORRECTION TypicalSMD5050
 
 #define DEBUG_UPDATE 0
 #define DEBUG_DISTANCE 0
@@ -51,6 +61,10 @@ void setup() {
   // start the sound
   S.begin(&D, &wavSerial);
 
+  // tell FastLED about the LED strip configuration
+  FastLED.addLeds<LED_TYPE,PIN_LED_DATA,PIN_LED_CLK,COLOR_ORDER>(leds, NUM_LEDS).setCorrection(COLOR_CORRECTION);
+  // set master brightness control
+  FastLED.setBrightness(255);
 }
 
 void loop() {
@@ -87,6 +101,21 @@ void loop() {
 
   // update sound
   S.update();
+
+  // update lights
+  static CHSV color(HUE_RED, 255, 255);
+  color.hue += 1;
+  for( byte i=0; i<N_RANGE; i++ ) {
+    // copy the color
+    CHSV seg = color;
+    // assign value from distance
+    byte distance = constrain(D.D[i], 0, HL);
+    for( byte j=0; j<NUM_LEDS_PER_CORNER; j++ ) {
+      leds[i*NUM_LEDS_PER_CORNER+j] = seg;
+      leds[i*NUM_LEDS_PER_CORNER+j].fadeLightBy( distance );
+    }
+  }
+  FastLED.show();
 
   if( DEBUG_DISTANCE ) {
     for ( byte i = 0; i < N_RANGE; i++ ) {
