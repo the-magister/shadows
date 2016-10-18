@@ -31,7 +31,8 @@ Sound S;
 #define NUM_LEDS_PER_CORNER 2
 #define NUM_LEDS NUM_LEDS_PER_CORNER*N_RANGE
 CRGB leds[NUM_LEDS];
-const byte cornerIndex[N_RANGE] = {0, NUM_LEDS_PER_CORNER, NUM_LEDS_PER_CORNER*2};
+// index to the correct nodes
+const byte cornerIndex[N_RANGE] = {NUM_LEDS_PER_CORNER*0, NUM_LEDS_PER_CORNER*2, NUM_LEDS_PER_CORNER*1};
 #define PIN_LED_CLK 3    // corner LED clock line
 #define PIN_LED_DATA 4    // corner LED data line
 // color correction options; see FastLED/color.h
