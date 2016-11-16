@@ -41,10 +41,11 @@ const byte cornerIndex[N_RANGE] = {NUM_LEDS_PER_CORNER*0, NUM_LEDS_PER_CORNER*2,
 
 #define DEBUG_UPDATE 0
 #define DEBUG_DISTANCE 0
+#define DEBUG_CALIBRATE 1
 #define DEBUG_ALTITUDE 0
 #define DEBUG_COLLINEAR 0
 #define DEBUG_AREA 0
-#define DEBUG_INTERVAL 0
+#define DEBUG_INTERVAL 0\
 
 void setup() {
   Serial.begin(115200);
@@ -88,7 +89,11 @@ void loop() {
   }
 
   // average the sensor readings
-  L.update();  
+  static byte highest[] = {0,0,0};
+  L.update();
+  for( byte i=0; i<N_RANGE; i++ ) {
+    highest[i] = highest[i] < D.D[i] ? D.D[i] : highest[i];
+  }
 
   // send
   if( N.state == M_PROGRAM ) {
@@ -121,6 +126,13 @@ void loop() {
   if( DEBUG_DISTANCE ) {
     for ( byte i = 0; i < N_RANGE; i++ ) {
       Serial << F("S") << i << F(" range(units)=") << D.D[i] << F("\t");
+    }
+    Serial << endl;
+  }
+
+  if( DEBUG_CALIBRATE ) {
+    for ( byte i = 0; i < N_RANGE; i++ ) {
+      Serial << F("S") << i << F(" range(units)=") << D.D[i] << " / " << highest[i] << F("\t");
     }
     Serial << endl;
   }
