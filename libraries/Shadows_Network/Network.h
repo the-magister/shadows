@@ -30,9 +30,9 @@
 //#define SL			755U // sensor-sensor distance; i.e. side length
 //#define HL			654U // sensor-LED distance; i.e. altitude
 //#define LL			720U // LED strip length;
-#define SL			244U // sensor-sensor distance; i.e. side length
-#define HL			215U // sensor-LED distance; i.e. altitude, ~60"
-#define LL			220U // LED strip length; 
+#define SL			235U // sensor-sensor distance; i.e. side length  (79 inches)
+#define HL			212U // sensor-LED distance; i.e. altitude, ~60"  (71 inches)
+#define LL			223U // LED strip length;                         (75 inches)
 
 
 // distance information being transmitted
