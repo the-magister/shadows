@@ -74,6 +74,12 @@ void Location::calculateLocation() {
   // the distance measures to the right and left of the LED strips and
   // the known distance between the sensors form a triangle.
 
+  // cap the distance readings
+  // DANNE, I think we just need to cap the readings to not exceed HL to prevent Bad Math Happening.
+  for(byte i=0; i<N_RANGE; i++) {
+    if( d->D[i] > HL ) d->D[i] = HL;
+  }
+
   // altitude height.  the extent of the triangle's altitude.
   // these are the trilinear coordinates of the object.
   // https://en.wikipedia.org/wiki/Trilinear_coordinates
