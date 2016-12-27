@@ -26,21 +26,16 @@
 #define N_NODES				3 // 3 Lights, 3 Location nodes
 #define N_RANGE				3 // 
 
-// geometry of the devices, 8-bit
-//#define SL			755U // sensor-sensor distance; i.e. side length
-//#define HL			654U // sensor-LED distance; i.e. altitude
-//#define LL			720U // LED strip length;
-#define SL			235U // sensor-sensor distance; i.e. side length  (79 inches)
-#define HL			212U // sensor-LED distance; i.e. altitude, ~60"  (71 inches)
-#define LL			223U // LED strip length;                         (75 inches)
-
+// geometry of the devices, 16-bit
+const word SL = 65535;	// side-length of the triangle
+const word HL = 56755;	// altitude of the triangle; sqrt(3)/2 * SL
 
 // distance information being transmitted
 struct Distances {
-  byte D[N_RANGE]; // object location relative to sensors
-  byte Ab[N_NODES], Ah[N_NODES]; // object location relative to LEDs, altitude basis
-  byte Cb[N_NODES], Ch[N_NODES]; // object location relative to LEDs, collinear basis
-  byte Area[N_NODES]; // relative area of the triangle defined by the object and LEDs, relative to total area.
+  word D[N_RANGE]; // object location relative to sensors
+  word Ab[N_NODES], Ah[N_NODES]; // object location relative to LEDs, altitude basis
+  word Cb[N_NODES], Ch[N_NODES]; // object location relative to LEDs, collinear basis
+  word Area[N_NODES]; // relative area of the triangle defined by the object and LEDs, relative to total area.
 };
 
 // system state messages

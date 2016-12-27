@@ -42,8 +42,7 @@ void Sound::begin(Distances *D, SoftwareSerial *S) {
 }
 void Sound::update() {
   for( byte i=0; i<N_RANGE; i++ ) {
-    int distance = constrain(d->D[i], 0, HL);
-    int mapping = map(distance, 0, HL, trackGain, trackGain-30);
+    int mapping = map(d->D[i], 0, HL, trackGain, trackGain-30);
     wav.trackGain(track[i], mapping);
 
 //    Serial << F("t=") << i << F(" d=") << distance << F(" m=") << mapping << F("\t");

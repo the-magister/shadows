@@ -22,24 +22,33 @@ void Location::begin(Distances *D) {
   pinMode(PIN_START_RANGE, INPUT); // flip to high-impediance pin state so as to not clobber the return round-robin inc.
 
   this->d = D;
+
+//  analogReference(DEFAULT);
+  analogReference(INTERNAL); // built-in reference, which is 1.1V on ATmega328
+  // readings are capping out at 220 with a 5V reference, or about 1.078V.
+  // so, the 1.1V reference is nearly perfect.  
+
+  // reset min and max readings
+  for( byte i=0; i<N_RANGE; i++ ) {
+    maxReading[i] = 1000;
+    minReading[i] = 20;
+  }
   
   Serial << F("Location. startup complete.") << endl;
 }
 
 
 void Location::update() {
-
-  unsigned long reading[N_RANGE];
-  reading[0] = reading[1] = reading[2] = 0;
-  const byte nUpdates = 10;
-  for( byte i=0; i<nUpdates; i++ ) {
-    reading[0] += analogRead(PIN_RANGE_1);
-    reading[1] += analogRead(PIN_RANGE_2);
-    reading[2] += analogRead(PIN_RANGE_3);
+  // store readings
+  static unsigned long reading[N_RANGE] = { 1023, 1023, 1023 }; // initialize with a reasonable set of values
+  // over this interval of time
+  Metro updateTime(5UL);
+  // It takes about 100 microseconds (0.0001 s) to read an analog input, so should get about 50 readings.
+  
+  while( !updateTime.check() ) {
+    // do a running average, updating the value by 1/256ths with each reading
+    for( byte n=0; n<N_RANGE; n++ ) reading[n] = (255UL*(unsigned long)reading[n] + analogRead(rangePin[n])) >> 8; // >>8 is /256
   }
-  reading[0] = reading[0]/nUpdates;
-  reading[1] = reading[1]/nUpdates;
-  reading[2] = reading[2]/nUpdates;
     
   // AN Output:
   // Outputs analog voltage with a scaling factor of (Vcc/512) per inch. 
@@ -54,14 +63,12 @@ void Location::update() {
   // To Mike's reading, this means a unit of "1" in the analog read is 0.5 in.
   // distance [in] = reading [unit] * (5/1024 [volts/unit]) / (5/512 [volts/in])
   // distance [in] = reading [unit] * (1/2 [in/unit])
-  
+
   for( byte i=0; i<N_RANGE; i++ ) {
-//    reading[i] *= 10; // magic number
-//   reading[i] /= 3; // magic number
-    
-  // perhaps magic numbers of 5 and 2?
-  
-    d->D[i] = constrain(reading[i], 0, 255);
+    if( reading[i] > maxReading[i] ) maxReading[i] = reading[i];
+    if( reading[i] < minReading[i] ) minReading[i] = reading[i];
+      
+    d->D[i] = map( reading[i], minReading[i], maxReading[i], 0, HL);
   }
 
   // update the locations
@@ -109,14 +116,13 @@ void Location::calculateLocation() {
 
 // semiperimiter calculation
 word Location::semiPerimeter(byte i) {
-  return(
-    ( (word)SL + (word)d->D[left(i)] + (word)d->D[right(i)] ) >> 1 // >>1 is /2
-  );
+  unsigned long twoSP = SL + d->D[left(i)] + d->D[right(i)];
+  return( twoSP >> 1 ); // >>1 is /2
 }
 
 // given the altitude's distance along the side length and the distance,
 // use Pythagorean's theorem to calculte the altitude 
-byte Location::altitudeHeight(byte i) {
+word Location::altitudeHeight(byte i) {
   // use right-i and left-i distance
   if( d->D[left(i)] + d->D[right(i)] < SL ) return( 0 );
 
@@ -124,10 +130,14 @@ byte Location::altitudeHeight(byte i) {
   unsigned long part1 = squareRoot(s*(s - d->D[left(i)]));
   unsigned long part2 = squareRoot((s-SL)*(s - d->D[right(i)]));
 //  Serial << F("i=") << i << F("\ts=") << s << F("\tpart1=") << part1 << F("\tpart2=") << part2 << endl;
-  
-  return( 
-    (2UL * part1 * part2) / SL // this big divide operator is slow.  bummer.
-  );
+
+
+  unsigned long tmp = 2UL * part1 * part2;
+  if( SL != 65535 ) {
+    Serial << F("BAD MATH!!!  (fix me)") << endl;
+    while(1);
+  }
+  return( tmp >> 16 ); // >>16 is /65536 which is SL
 }
 
 // use Vivani's theorem to adjust the sum of the heights to total height.
@@ -135,7 +145,7 @@ byte Location::altitudeHeight(byte i) {
 // with the object as a vertex must sum to the total triangle height
 void Location::correctAltitudeHeight() {
 
-  // compute the difference in sum of heights from SL
+  // compute the difference in sum of heights from HL
   int deltaAh = HL;
   for(byte i=0; i<N_NODES; i++) deltaAh -= d->Ah[i];
 //  Serial << F("deltaAh=") << deltaAh << endl;
@@ -168,7 +178,7 @@ void Location::correctAltitudeHeight() {
 // given two distances and a known side length, we can calculate the 
 // the altitude's distance along the side length of the altitude.
 // from https://en.wikipedia.org/wiki/Heron%27s_formula#Algebraic_proof_using_the_Pythagorean_theorem
-byte Location::altitudeBase(byte i) {
+word Location::altitudeBase(byte i) {
   if( d->D[left(i)] < d->Ah[i] ) return(0);
   
   // use left-i distance and ith height
@@ -184,7 +194,7 @@ byte Location::altitudeBase(byte i) {
 // algebraic solution involving determinants. otherwise, we'd require
 // calculations of angles.
 // https://en.wikipedia.org/wiki/Trilinear_coordinates#Collinearities_and_concurrencies
-byte Location::collinearBase(byte i) {
+word Location::collinearBase(byte i) {
   // use left-i altitude height and right-i altitude height
   return(
     ((unsigned long)(d->Ah[right(i)])*SL)/((unsigned long)d->Ah[right(i)]+(unsigned long)d->Ah[left(i)])
@@ -194,7 +204,7 @@ byte Location::collinearBase(byte i) {
 // given the extent of the altitude and the difference beween the collinear 
 // base intercept and the altitude's base intercept, we can use 
 // Pythagorean's theorem to compute the length of the collinear line. 
-byte Location::collinearHeight(byte i) {
+word Location::collinearHeight(byte i) {
   // use i altitude height and base; i collinear base
   return( d->Cb[i] >= d->Ab[i] ? // unsigned, so careful of order
     squareRoot( squared(d->Ah[i]) + squared(d->Cb[i]-d->Ab[i]) ) :
@@ -207,12 +217,12 @@ byte Location::collinearHeight(byte i) {
 // occupied by the triangle above this LED segment.
 // interpret the return of this function to be 65534ths 
 // https://en.wikipedia.org/wiki/Barycentric_coordinate_system
-byte Location::area(byte i) {
+word Location::area(byte i) {
   // use i altitude height
   // multiply the ratio of Ah[i]/sum(Ah[]) by the maximum word value to
   // generate a 8-bit fractional result.
   return(
-    ((unsigned long)((byte)(-1))*(unsigned long)d->Ah[i]) / (unsigned long)SL
+    ((unsigned long)((word)(-1))*(unsigned long)d->Ah[i]) / (unsigned long)SL
   );
 }
 

@@ -40,12 +40,12 @@ const byte cornerIndex[N_RANGE] = {NUM_LEDS_PER_CORNER*0, NUM_LEDS_PER_CORNER*2,
 #define COLOR_CORRECTION TypicalSMD5050
 
 #define DEBUG_UPDATE 0
-#define DEBUG_DISTANCE 0
+#define DEBUG_DISTANCE 1
 #define DEBUG_CALIBRATE 1
 #define DEBUG_ALTITUDE 0
 #define DEBUG_COLLINEAR 0
 #define DEBUG_AREA 0
-#define DEBUG_INTERVAL 0\
+#define DEBUG_INTERVAL 0
 
 void setup() {
   Serial.begin(115200);
@@ -89,11 +89,7 @@ void loop() {
   }
 
   // average the sensor readings
-  static byte highest[] = {0,0,0};
   L.update();
-  for( byte i=0; i<N_RANGE; i++ ) {
-    highest[i] = highest[i] < D.D[i] ? D.D[i] : highest[i];
-  }
 
   // send
   if( N.state == M_PROGRAM ) {
@@ -112,12 +108,10 @@ void loop() {
   static CHSV color(HUE_RED, 255, 255);
   color.hue += 1;
   for( byte i=0; i<N_RANGE; i++ ) {
-    // copy the color
-    CHSV seg = color;
     // assign value from distance
-    byte distance = constrain(D.D[i], 0, HL);
+    byte distance = map(D.D[i], 0, HL, 0, 255);
     for( byte j=0; j<NUM_LEDS_PER_CORNER; j++ ) {
-      leds[cornerIndex[i]+j] = seg;
+      leds[cornerIndex[i]+j] = color;
       leds[cornerIndex[i]+j].fadeLightBy( distance );
     }
   }
@@ -125,14 +119,14 @@ void loop() {
 
   if( DEBUG_DISTANCE ) {
     for ( byte i = 0; i < N_RANGE; i++ ) {
-      Serial << F("S") << i << F(" range(units)=") << D.D[i] << F("\t");
+      Serial << F("S") << i << F(" range=") << D.D[i] << F("\t");
     }
     Serial << endl;
   }
 
   if( DEBUG_CALIBRATE ) {
     for ( byte i = 0; i < N_RANGE; i++ ) {
-      Serial << F("S") << i << F(" range(units)=") << D.D[i] << " / " << highest[i] << F("\t");
+      Serial << F("S") << i << F(" min=") << L.minReading[i] << F(" max=") << L.maxReading[i] << F("\t");
     }
     Serial << endl;
   }
