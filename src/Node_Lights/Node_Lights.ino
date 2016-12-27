@@ -26,7 +26,7 @@ void inPlaneUpdate();
 State inPlane = State(inPlaneUpdate); // sensors are picking up an object, and it's within the place of the triangle
 FSM S = FSM(idle); // start idle
 
-#define IN_PLANE 200
+const word distInPlane = 0.9*HL;
 
 // track the average of Ch and Cb
 unsigned long Ch = HL;
@@ -56,7 +56,7 @@ void setup() {
 
 boolean objectInPlane() {
   return(
-    D.D[0] <= IN_PLANE || D.D[1] <= IN_PLANE || D.D[2] <= IN_PLANE
+    D.D[0] <= distInPlane || D.D[1] <= distInPlane || D.D[2] <= distInPlane
 //      true
   );
 }
@@ -130,8 +130,8 @@ void inPlaneUpdate() {
   A.setExtent(
     map(
 //      constrain(L.Ch[N.myIndex], 0, SL),
-      constrain(Ch, 0, SL),
-      0, SL, // map [0, HL]
+      constrain(Ch, 0, HL),
+      0, HL, // map [0, HL]
       0, NUM_LEDS / 2 // to [0, NUM_LEDS/2]
     )
   );
