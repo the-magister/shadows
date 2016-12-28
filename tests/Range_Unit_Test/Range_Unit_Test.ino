@@ -11,8 +11,6 @@ void stopRange() {
   pinMode(PIN_START_RANGE, OUTPUT);
 }
 
-
-
 void startRange() {
   pinMode(PIN_START_RANGE, OUTPUT);
   digitalWrite(PIN_START_RANGE, HIGH);
@@ -30,15 +28,20 @@ void setup() {
   delay(500); // delay after power up
 
   // start the range finder
+  stopRange();
+  delay(500);
   startRange();
 
+  analogReference(INTERNAL);
+  
   Serial << F("S0,S1,S2") << endl;
 }
 
 void loop() {
-  Serial << analogRead(rangePin[0]) << F(",");
-  Serial << analogRead(rangePin[1]) << F(",");
-  Serial << analogRead(rangePin[2]) << endl;
+  Serial << analogRead(rangePin[0]) << F(","); // Blue; bottom
+  Serial << analogRead(rangePin[1]) << F(","); // Red: north upper
+  Serial << analogRead(rangePin[2]) << F(","); // Yellow: south upper
+  Serial << F("1024") << endl; 
   delay(1);
 }
 
