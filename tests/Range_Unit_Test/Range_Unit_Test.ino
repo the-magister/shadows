@@ -14,35 +14,60 @@ void stopRange() {
 void startRange() {
   pinMode(PIN_START_RANGE, OUTPUT);
   digitalWrite(PIN_START_RANGE, HIGH);
-  delay(10);
+  delay(5);
   digitalWrite(PIN_START_RANGE, LOW);
 
   pinMode(PIN_START_RANGE, INPUT); // flip to high-impediance pin state so as to not clobber the return round-robin inc.
+
+}
+
+void rangeOnce() {
+  static Metro doneRanging(49UL);
+
+  pinMode(PIN_START_RANGE, OUTPUT);
+
+  doneRanging.reset();
+
+  digitalWrite(PIN_START_RANGE, HIGH);
+  delay(5);
+  digitalWrite(PIN_START_RANGE, LOW);
+
+  while (! doneRanging.check() );
+  Serial << analogRead(rangePin[0]) << F(",");
+
+  doneRanging.reset();
+  while (! doneRanging.check() );
+  Serial << analogRead(rangePin[1]) << F(",");
+
+  doneRanging.reset();
+  while (! doneRanging.check() );
+  Serial << analogRead(rangePin[2]) << F(",");
+
 }
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(250000);
 
   //  Timing Description
   // 250mS after power-up, the LV-MaxSonar-EZ is ready to accept the RX command.
   delay(500); // delay after power up
 
   // start the range finder
-  stopRange();
-  delay(500);
-  startRange();
+  //  stopRange();
+  //  delay(500);
+  //  startRange();
+  //  stopRange();
 
   analogReference(INTERNAL);
-  
-  Serial << F("S0,S1,S2") << endl;
 }
 
 void loop() {
-  Serial << analogRead(rangePin[0]) << F(","); // Blue; bottom
-  Serial << analogRead(rangePin[1]) << F(","); // Red: north upper
-  Serial << analogRead(rangePin[2]) << F(","); // Yellow: south upper
-  Serial << F("1024") << endl; 
-  delay(1);
+  rangeOnce();
+
+//  Serial << analogRead(rangePin[0]) << F(","); // Blue; bottom
+//  Serial << analogRead(rangePin[1]) << F(","); // Red: north upper
+//  Serial << analogRead(rangePin[2]) << F(","); // Yellow: south upper
+  Serial << F("1024,0") << endl;
 }
 
 // readings: 212 ie. 60"
