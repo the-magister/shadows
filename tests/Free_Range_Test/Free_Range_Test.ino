@@ -59,20 +59,18 @@ void setup() {
   //  stopRange();
 
   analogReference(INTERNAL);
-//  rangeOnce();
-//  rangeOnce();
   startRange();
 }
 
 void loop() {
 //  rangeOnce();
 
-  Serial << analogRead(rangePin[0]) << F(","); // Blue; bottom
-  Serial << analogRead(rangePin[1]) << F(","); // Red: north upper
-  Serial << analogRead(rangePin[2]) << F(","); // Yellow: south upper
+//  Serial << analogRead(rangePin[0]) << F(","); // Blue; bottom
+//  Serial << analogRead(rangePin[1]) << F(","); // Red: north upper
+//  Serial << analogRead(rangePin[2]) << F(","); // Yellow: south upper
+  Serial << analogRead(0) << F(","); // Free Range
   Serial << F("1024,0") << endl;
 
-//    Serial << F("1,0,") << digitalRead(PIN_START_RANGE) << endl;
 }
 
 // readings: 212 ie. 60"
