@@ -8,7 +8,7 @@
 #include <Metro.h>
 
 #define PIN_START_RANGE 5 // trigger for ranging start; read the fps; note this is Dn
-const byte rangePin[N_RANGE] = { 7, 5, 6 }; // range from sonar 10, 11, 12, respectivel; note this is An
+const byte rangePin[N_RANGE] = { 7, 6, 5 }; // range from sonar 10, 11, 12, respectivel; note this is An
 
 /*
 Physical layout:
@@ -39,11 +39,8 @@ class Location {
 
     // run an update; calls calculateLocation after.
     void update();
-
-    // keep these to map readings
-    long maxReading[N_RANGE];
-    long minReading[N_RANGE];
-
+    word reading[N_RANGE]; // for debugging purposes.
+    
   private:
     byte left(byte i);
     byte right(byte i);

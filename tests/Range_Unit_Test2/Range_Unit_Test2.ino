@@ -1,4 +1,3 @@
-#include <ResponsiveAnalogRead.h>
 #include <Streaming.h>
 #include <Metro.h>
 
@@ -6,11 +5,7 @@
 #define N_RANGE 3
 const byte rangePin[N_RANGE] = { 7, 5, 6 }; // range from sonar 10, 11, 12, respectivel; note this is An
 
-ResponsiveAnalogRead analog[N_RANGE] = {
-  {rangePin[0], false, 0.005},
-  {rangePin[1], false, 0.005},
-  {rangePin[2], false, 0.005}
-};
+unsigned long rangeValue[N_RANGE] = { 650, 650, 650 };
 
 void begin() {
   // use a 1.1 V internal reference to increase resolution
@@ -21,7 +16,7 @@ void begin() {
   pinMode(PIN_START_RANGE, OUTPUT);
 
   // 250 ms after power up
-  delay(250);
+  delay(500);
 
   // send a start pulse
   digitalWrite(PIN_START_RANGE, HIGH);
@@ -33,8 +28,18 @@ void begin() {
 }
 
 void update() {
-  // new C++ iterators are hawt.
-  for( ResponsiveAnalogRead & s : analog ) s.update();
+// It takes about 100 microseconds (0.0001 s) to read an analog input, so the maximum reading rate is about 10,000 times a second.
+
+  const byte nUp = 10;
+  static unsigned long pool;
+
+  for( byte n=0; n<N_RANGE; n++ ) {
+    pool = 0;
+    for( byte i=0; i<nUp; i++ ) {
+      pool += analogRead(rangePin[n]);
+    }
+    rangeValue[n] = pool / nUp;
+  }
 }
 
 void setup() {
@@ -49,17 +54,14 @@ void loop() {
 
   Serial << F("0,");
 
-  // new C++ iterators are hawt.
-//  for( ResponsiveAnalogRead & s : analog ) {
-//    Serial << s.getRawValue() << F(",");
-//  }
+  for( byte n=0; n<N_RANGE; n++ )
+    Serial << analogRead(rangePin[n]) << F(",");
 
   Serial << F("1024,");
 
-  // new C++ iterators are hawt.
-  for( ResponsiveAnalogRead & s : analog ) {
-    Serial << s.getValue() << F(",");
-  }
+  for( byte n=0; n<N_RANGE; n++ )
+    Serial << rangeValue[n] << F(",");
+  
 
   Serial << endl;
 

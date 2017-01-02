@@ -26,14 +26,13 @@ void inPlaneUpdate();
 State inPlane = State(inPlaneUpdate); // sensors are picking up an object, and it's within the place of the triangle
 FSM S = FSM(idle); // start idle
 
-const word distInPlane = 0.9*HL;
+const word distInPlane = 0.9*(float)HL;
 
 // track the average of Ch and Cb
 unsigned long Ch = HL;
 unsigned long Cb = HL;
 byte window = 3; // how many sensor measurements do we average to smooth Cb and Ch?
-// each read is about 17 ms, 
-// so the for three sensors of updates, we're talking ~50ms. 
+// each read is about 50 ms
 
 // track state
 systemState lastState;
@@ -132,7 +131,7 @@ void inPlaneUpdate() {
 //      constrain(L.Ch[N.myIndex], 0, SL),
       constrain(Ch, 0, HL),
       0, HL, // map [0, HL]
-      0, NUM_LEDS / 2 // to [0, NUM_LEDS/2]
+      1, NUM_LEDS / 2 // to [0, NUM_LEDS/2]
     )
   );
 

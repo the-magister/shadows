@@ -7,95 +7,48 @@ void Location::begin(Distances *D) {
   digitalWrite(PIN_START_RANGE, LOW);
   pinMode(PIN_START_RANGE, OUTPUT);
 
-  //  Timing Description
-  // 250mS after power-up, the LV-MaxSonar-EZ is ready to accept the RX command.
-  delay(500); // delay after power up
+  // 250 ms after power up
+  delay(500);
 
-  // AN Output Constantly Looping:
-  // "To start the continuous loop, bring the RX pin high for a time greater than 20us but
-  // less than 48ms and return to ground."
-
+  // send a start pulse
   digitalWrite(PIN_START_RANGE, HIGH);
-  delay(10);
+  delay(5);
   digitalWrite(PIN_START_RANGE, LOW);
 
-  pinMode(PIN_START_RANGE, INPUT); // flip to high-impediance pin state so as to not clobber the return round-robin inc.
+  // flip to high-impediance pin state so as to not clobber the return round-robin inc.  
+  pinMode(PIN_START_RANGE, INPUT); 
 
   this->d = D;
 
-//  analogReference(DEFAULT);
   analogReference(INTERNAL); // built-in reference, which is 1.1V on ATmega328
   // readings are capping out at 220 with a 5V reference, or about 1.078V.
   // so, the 1.1V reference is nearly perfect.
-
-  // reset min and max readings
-  for ( byte i = 0; i < N_RANGE; i++ ) {
-    this->maxReading[i] = 100;
-    this->minReading[i] = 100;
-  }
-  // should probably commit these to EEPROM (TODO)
-//  maxReading[0] = 915;
-//  maxReading[1] = 947;
-//  maxReading[2] = 969;
-  minReading[0] = 55;
-  minReading[1] = 0;
-  minReading[2] = 0;
 
   Serial << F("Location. startup complete.") << endl;
 }
 
 
 void Location::update() {
-  // store readings
-  unsigned long reading[N_RANGE] = { 0,0,0 }; // initialize with a reasonable set of values
-  // over this interval of time
-  static Metro updateFor(50UL);
-  updateFor.reset();
-  // It takes about 100 microseconds (0.0001 s) to read an analog input, so should get about 50 readings.
+// It takes about 100 microseconds (0.0001 s) to read an analog input, so the maximum reading rate is about 10,000 times a second.
 
-  while ( !updateFor.check() ) {
-    // take the maximum value read
-    for ( byte n = 0; n < N_RANGE; n++ ) {
-      word r = analogRead(rangePin[n]);
-//      Serial << r << F("\t");
-      if( r>reading[n] ) reading[n] = r;
-//      reading[n] = (255UL * (unsigned long)reading[n] + r ) >> 8; // >>8 is /256
+  const byte nUp = 10;
+  static unsigned long pool;
+  
+  for( byte n=0; n<N_RANGE; n++ ) {
+    pool = 0;
+    for( byte i=0; i<nUp; i++ ) {
+      pool += analogRead(rangePin[n]);
     }
-//    Serial << endl;
+    reading[n] = pool / nUp;
   }
 
-  // AN Output:
-  // Outputs analog voltage with a scaling factor of (Vcc/512) per inch.
-  // A supply of 5V yields ~9.8mV/in. and 3.3V yields ~6.4mV/in.
-  // The output is buffered and corresponds to the most recent range data.
-
-  // Arduino analogRead:
-  // This means that it will map input voltages between 0 and 5 volts into integer
-  // values between 0 and 1023. This yields a resolution between readings of:
-  // 5 volts / 1024 units or, .0049 volts (4.9 mV) per unit.
-
-  // To Mike's reading, this means a unit of "1" in the analog read is 0.5 in.
-  // distance [in] = reading [unit] * (5/1024 [volts/unit]) / (5/512 [volts/in])
-  // distance [in] = reading [unit] * (1/2 [in/unit])
-
   for ( byte i = 0; i < N_RANGE; i++ ) {
-    Serial << F("S") << i << F(" reading=") << reading[i] << F("\t");
-  }
-  Serial << endl;
-
-
-  for ( byte i = 0; i < N_RANGE; i++ ) {
-    if ( reading[i] > this->maxReading[i] ) this->maxReading[i] = reading[i];
-    if ( reading[i] < this->minReading[i] ) this->minReading[i] = reading[i];
-
-    d->D[i] = map( reading[i], this->minReading[i], this->maxReading[i], 0, HL);
+    d->D[i] = constrain( reading[i], 0, HL);
   }
 
   // update the locations
   calculateLocation();
 }
-
-
 
 void Location::calculateLocation() {
   // the distance measures to the right and left of the LED strips and
@@ -151,13 +104,8 @@ word Location::altitudeHeight(byte i) {
   unsigned long part2 = squareRoot((s - SL) * (s - d->D[right(i)]));
   //  Serial << F("i=") << i << F("\ts=") << s << F("\tpart1=") << part1 << F("\tpart2=") << part2 << endl;
 
-
   unsigned long tmp = 2UL * part1 * part2;
-  if ( SL != 65535 ) {
-    Serial << F("BAD MATH!!!  (fix me)") << endl;
-    while (1);
-  }
-  return ( tmp >> 16 ); // >>16 is /65536 which is SL
+  return ( tmp / (unsigned long)SL ); 
 }
 
 // use Vivani's theorem to adjust the sum of the heights to total height.

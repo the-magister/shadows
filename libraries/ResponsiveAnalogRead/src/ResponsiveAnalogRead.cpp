@@ -38,7 +38,8 @@ ResponsiveAnalogRead::ResponsiveAnalogRead(int pin, bool sleepEnable, float snap
 
 void ResponsiveAnalogRead::update()
 {
-  this->update(analogRead(pin));
+  this->rawValue = analogRead(this->pin);
+  this->update(this->rawValue);
 }
 
 void ResponsiveAnalogRead::update(int rawValue)

@@ -9,8 +9,8 @@ CRGB leds[NUM_LEDS];
 // startup
 void Animation::begin() {
   // tell FastLED about the LED strip configuration; mirrored strips
-  FastLED.addLeds<APA102, PIN_DATA1, PIN_CLK>(leds, NUM_LEDS).setCorrection(TypicalSMD5050);
-  FastLED.addLeds<APA102, PIN_DATA2, PIN_CLK>(leds, NUM_LEDS).setCorrection(TypicalSMD5050);
+  FastLED.addLeds<APA102, PIN_DATA1, PIN_CLK, BGR>(leds, NUM_LEDS).setCorrection(TypicalSMD5050);
+  FastLED.addLeds<APA102, PIN_DATA2, PIN_CLK, BGR>(leds, NUM_LEDS).setCorrection(TypicalSMD5050);
 
   random16_add_entropy(analogRead(A0));
 
@@ -85,18 +85,18 @@ void Animation::update() {
     
     switch ( anim ) {
       case A_IDLE:
-//        aCylon( 255 );
-        aFire( 55, 0 );
+        aCylon( 255 );
+//        aFire( 55, 0 );
         break;
       case A_INPLANE:
 //        aProjection( this->currentPosition, this->currentExtent );
         aFire( this->currentPosition, this->currentExtent );
          break;
       case A_CALIBRATE:
-        aSolid( CRGB(0,255,0) );
+        aSolid( CRGB::Green );
          break;
       case A_PROGRAM:
-        aSolid( CRGB(0,0,255) );
+        aSolid( CRGB::Blue );
          break;
     }
 /*    
@@ -144,19 +144,21 @@ void Animation::aCylon(byte bright) {
   const byte bpm[]={16,8};
   static unsigned long tbase = millis();
   static byte bpmI = 0;
-  const word phase[] = {(65535/4)*3, 65535/4}; // 3/4*PI phase change, so we start at pixel 0
+  const word phase[] = {(65535U/4U)*3U, 65535U/4U}; // 3/4*PI phase change, so we start at pixel 0
   
   // fade everything
   fadeToBlackBy( leds, NUM_LEDS, bpm[bpmI] );
 
   // set the speed the pixel travels 
-  byte posVal = map(
-    beatsin16(bpm[bpmI], 0, 65535, tbase, phase[bpmI]),
-    0, 65535, 0, NUM_LEDS
-  ); // see: lib8tion.h
+  byte posVal = beatsin16(bpm[bpmI], 0, NUM_LEDS, tbase, phase[bpmI]);
+  // note, that "NUM_LEDS" is correct.
+//  byte posVal = map(
+//    beatsin16(bpm[bpmI], 0, 65535, tbase, phase[bpmI]),
+//    0, 65535, 0, NUM_LEDS
+//  ); // see: lib8tion.h
 
   // change bpm?
-  if ( posVal==NUM_LEDS-1 && bpmI==0 && millis() > tbase+500UL ) { 
+  if ( posVal>=NUM_LEDS-1 && bpmI==0 && millis() > tbase+500UL ) { 
       bpmI = 1;
       tbase = millis();
   }
