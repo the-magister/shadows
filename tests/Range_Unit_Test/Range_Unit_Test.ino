@@ -1,3 +1,4 @@
+#include <ResponsiveAnalogRead.h>
 #include <Streaming.h>
 #include <Metro.h>
 
@@ -5,79 +6,60 @@
 #define N_RANGE 3
 const byte rangePin[N_RANGE] = { 7, 5, 6 }; // range from sonar 10, 11, 12, respectivel; note this is An
 
-void stopRange() {
+ResponsiveAnalogRead analog[N_RANGE] = {
+  {rangePin[0], true},
+  {rangePin[1], true},
+  {rangePin[2], true}
+};
+
+void begin() {
   // has the effect of stopping any ongoing round-robin
   digitalWrite(PIN_START_RANGE, LOW);
   pinMode(PIN_START_RANGE, OUTPUT);
-}
 
-void startRange() {
-  pinMode(PIN_START_RANGE, OUTPUT);
+  // 250 ms after power up
+  delay(250);
+
+  // send a start pulse
   digitalWrite(PIN_START_RANGE, HIGH);
   delay(5);
   digitalWrite(PIN_START_RANGE, LOW);
 
-  pinMode(PIN_START_RANGE, INPUT); // flip to high-impediance pin state so as to not clobber the return round-robin inc.
-
+  // flip to high-impediance pin state so as to not clobber the return round-robin inc.  
+  pinMode(PIN_START_RANGE, INPUT); 
 }
 
-void rangeOnce() {
-  static Metro doneRanging(49UL);
-
-  pinMode(PIN_START_RANGE, OUTPUT);
-
-  doneRanging.reset();
-
-  digitalWrite(PIN_START_RANGE, HIGH);
-  delay(5);
-  digitalWrite(PIN_START_RANGE, LOW);
-
-  while (! doneRanging.check() );
-  Serial << analogRead(rangePin[0]) << F(",");
-
-  doneRanging.reset();
-  while (! doneRanging.check() );
-  Serial << analogRead(rangePin[1]) << F(",");
-
-  doneRanging.reset();
-  while (! doneRanging.check() );
-  Serial << analogRead(rangePin[2]) << F(",");
-
+void update() {
+//  for( byte n=0; n<N_RANGE; n++ ) analog[n].update();
+  // new C++ iterators are hawt.
+  for( ResponsiveAnalogRead & s : analog ) s.update();
 }
 
 void setup() {
   Serial.begin(250000);
 
-  //  Timing Description
-  // 250mS after power-up, the LV-MaxSonar-EZ is ready to accept the RX command.
-  delay(500); // delay after power up
-
-  // start the range finder
-  //  stopRange();
-  //  delay(500);
-  //  startRange();
-  //  stopRange();
-
+  // use a 1.1 V internal reference to increase resolution
   analogReference(INTERNAL);
-//  rangeOnce();
-//  rangeOnce();
-  startRange();
+
+  // fire up the ranging
+  begin();
 }
 
 void loop() {
-//  rangeOnce();
+  update();
 
-  Serial << analogRead(rangePin[0]) << F(","); // Blue; bottom
-  Serial << analogRead(rangePin[1]) << F(","); // Red: north upper
-  Serial << analogRead(rangePin[2]) << F(","); // Yellow: south upper
-  Serial << F("1024,0") << endl;
+  Serial << F("0,");
 
-//    Serial << F("1,0,") << digitalRead(PIN_START_RANGE) << endl;
+  // new C++ iterators are hawt.
+  for( ResponsiveAnalogRead & s : analog ) {
+    Serial << s.getRawValue() << F(",");
+  }
+
+  Serial << F("1024,");
+
+  // new C++ iterators are hawt.
+  for( ResponsiveAnalogRead & s : analog ) {
+    Serial << s.getValue() << F(",");
+  }
 }
 
-// readings: 212 ie. 60"
-
-// Analog, (Vcc/512) / inch
-
-// 212/1023
-// reading : 0.2 V

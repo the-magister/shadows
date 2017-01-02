@@ -5,6 +5,26 @@
 #define N_RANGE 3
 const byte rangePin[N_RANGE] = { 7, 5, 6 }; // range from sonar 10, 11, 12, respectivel; note this is An
 
+void begin() {
+  // Timing Description
+  
+  // stop any ongoing round-robin; thus, this function can serve to reset the chaining
+  digitalWrite(PIN_START_RANGE, LOW);
+  pinMode(PIN_START_RANGE, OUTPUT);
+  
+  // 250mS after power-up, the LV-MaxSonar-EZ is ready to accept the RX command.
+  delay(250);
+  
+  // bring RX high for less than 48 ms, then low.
+  digitalWrite(PIN_START_RANGE, HIGH);
+  delay(5);
+  digitalWrite(PIN_START_RANGE, LOW);
+
+  // flip to high-impediance pin state so as to not clobber the return round-robin inc.  
+  pinMode(PIN_START_RANGE, INPUT); 
+ 
+}
+
 void stopRange() {
   // has the effect of stopping any ongoing round-robin
   digitalWrite(PIN_START_RANGE, LOW);
