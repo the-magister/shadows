@@ -4,7 +4,7 @@
 
 #define PIN_START_RANGE 5 // trigger for ranging start; read the fps; note this is Dn
 #define N_RANGE 3
-const byte rangePin[N_RANGE] = { 7, 5, 6 }; // range from sonar 10, 11, 12, respectivel; note this is An
+const byte rangePin[N_RANGE] = { 7, 6, 5 }; // range from sonar 10, 11, 12, respectivel; note this is An
 
 ResponsiveAnalogRead analog[N_RANGE] = {
   {rangePin[0], false, 0.005},

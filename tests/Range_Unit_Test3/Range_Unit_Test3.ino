@@ -10,6 +10,9 @@ unsigned long rangeValue[N_RANGE] = { 650, 650, 650 };
 void begin() {
   // use a 1.1 V internal reference to increase resolution
   analogReference(INTERNAL);
+  digitalWrite(A5, LOW);
+  digitalWrite(A6, HIGH);
+  digitalWrite(A7, HIGH);
   
   // has the effect of stopping any ongoing round-robin
   digitalWrite(PIN_START_RANGE, LOW);

@@ -39,12 +39,12 @@ const byte cornerIndex[N_RANGE] = {NUM_LEDS_PER_CORNER*0, NUM_LEDS_PER_CORNER*1,
 // #define COLOR_CORRECTION TypicalLEDStrip
 #define COLOR_CORRECTION TypicalSMD5050
 
-#define DEBUG_UPDATE 0
+#define DEBUG_UPDATE 1
 #define DEBUG_DISTANCE 0
 #define DEBUG_ALTITUDE 0
 #define DEBUG_COLLINEAR 0
 #define DEBUG_AREA 0
-#define DEBUG_INTERVAL 1
+#define DEBUG_INTERVAL 0
 
 void setup() {
   // Need to make sure do this immediately after startup.
@@ -56,7 +56,7 @@ void setup() {
   Serial.begin(115200);
 
   // start the radio
-  N.begin(&D);
+  N.begin(&D, 255, GROUPID, RF69_915MHZ, 5); // Higher power setting goofing analogRead()!!
 
   // wait enough time to get a reprogram signal
   Metro startupDelay(1000UL);
@@ -96,7 +96,6 @@ void loop() {
   // average the sensor readings
   L.update();
 
-
   // update sound
   S.update();
 
@@ -123,6 +122,7 @@ void loop() {
 
   // send
   N.sendMessage();
+  
   if( DEBUG_UPDATE ) {
     for ( byte i = 0; i < N_RANGE; i++ ) {
       Serial << F("S") << i << F(" reading=") << L.reading[i] << F("\t");

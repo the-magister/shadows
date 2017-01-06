@@ -32,18 +32,17 @@ void Location::update() {
 // It takes about 100 microseconds (0.0001 s) to read an analog input, so the maximum reading rate is about 10,000 times a second.
 
   const byte nUp = 10;
-  static unsigned long pool;
+  unsigned long pool[N_RANGE] = {0,0,0};
   
-  for( byte n=0; n<N_RANGE; n++ ) {
-    pool = 0;
-    for( byte i=0; i<nUp; i++ ) {
-      pool += analogRead(rangePin[n]);
+  for( byte i=0; i<nUp; i++ ) {
+    for ( byte n = 0; n < N_RANGE; n++ ) {
+      pool[n] += analogRead(rangePin[n]);
     }
-    reading[n] = pool / nUp;
   }
-
+  
   for ( byte i = 0; i < N_RANGE; i++ ) {
-    d->D[i] = constrain( reading[i], 0, HL);
+    reading[i] = pool[i] / nUp;
+    d->D[i] = constrain( reading[i], 0, HL );
   }
 
   // update the locations
