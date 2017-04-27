@@ -36,7 +36,7 @@ void Sound::begin(Distances *D, SoftwareSerial *S) {
     wav.trackLoop(track[i], true);
   }
 
-  Serial << F("Set up Sound") << endl;
+  Serial << F("Set up Sound.") << endl;
 
   this->d = D;
 }

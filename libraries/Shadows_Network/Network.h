@@ -27,8 +27,8 @@
 #define N_RANGE				3 // 
 
 // geometry of the devices, 16-bit
-const word SL = 65535;	// side-length of the triangle
-const word HL = 56755;	// altitude of the triangle; sqrt(3)/2 * SL
+const word SL = 774;	// side-length of the triangle; 2/sqrt(3) * HL
+const word HL = 670;	// altitude of the triangle; sqrt(3)/2 * SL
 
 // distance information being transmitted
 struct Distances {

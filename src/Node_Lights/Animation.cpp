@@ -9,8 +9,8 @@ CRGB leds[NUM_LEDS];
 // startup
 void Animation::begin() {
   // tell FastLED about the LED strip configuration; mirrored strips
-  FastLED.addLeds<APA102, PIN_DATA1, PIN_CLK>(leds, NUM_LEDS).setCorrection(TypicalSMD5050);
-  FastLED.addLeds<APA102, PIN_DATA2, PIN_CLK>(leds, NUM_LEDS).setCorrection(TypicalSMD5050);
+  FastLED.addLeds<APA102, PIN_DATA1, PIN_CLK, BGR>(leds, NUM_LEDS).setCorrection(TypicalSMD5050);
+  FastLED.addLeds<APA102, PIN_DATA2, PIN_CLK, BGR>(leds, NUM_LEDS).setCorrection(TypicalSMD5050);
 
   random16_add_entropy(analogRead(A0));
 
@@ -86,17 +86,18 @@ void Animation::update() {
     switch ( anim ) {
       case A_IDLE:
 //        aCylon( 255 );
-        aFire( 55, 0 );
+        aCylonSimple( 255 );
+//        aFire( 55, 0 );
         break;
       case A_INPLANE:
 //        aProjection( this->currentPosition, this->currentExtent );
         aFire( this->currentPosition, this->currentExtent );
          break;
       case A_CALIBRATE:
-        aSolid( CRGB(0,255,0) );
+        aSolid( CRGB::Green );
          break;
       case A_PROGRAM:
-        aSolid( CRGB(0,0,255) );
+        aSolid( CRGB::Blue );
          break;
     }
 /*    
@@ -142,28 +143,54 @@ void Animation::aCylon(byte bright) {
 
   // two different bpm; one for CW, one for CCW.
   const byte bpm[]={16,8};
-  static unsigned long tbase = millis();
+  static word tbase = (word)millis();
   static byte bpmI = 0;
-  const word phase[] = {(65535/4)*3, 65535/4}; // 3/4*PI phase change, so we start at pixel 0
+  const word phase[] = {(65535U/4U)*3U, 65535U/4U}; // 3/4*PI phase change, so we start at pixel 0
   
   // fade everything
   fadeToBlackBy( leds, NUM_LEDS, bpm[bpmI] );
 
   // set the speed the pixel travels 
-  byte posVal = map(
-    beatsin16(bpm[bpmI], 0, 65535, tbase, phase[bpmI]),
-    0, 65535, 0, NUM_LEDS
-  ); // see: lib8tion.h
+  byte posVal = beatsin16(bpm[bpmI], 0, NUM_LEDS, tbase, phase[bpmI]); // last two args are uint_16t
+  // note, that "NUM_LEDS" is correct.
+//  byte posVal = map(
+//    beatsin16(bpm[bpmI], 0, 65535, tbase, phase[bpmI]),
+//    0, 65535, 0, NUM_LEDS
+//  ); // see: lib8tion.h
 
   // change bpm?
-  if ( posVal==NUM_LEDS-1 && bpmI==0 && millis() > tbase+500UL ) { 
+  if ( posVal>=NUM_LEDS-1 && bpmI==0 && (word)millis() > tbase+500UL ) { 
       bpmI = 1;
-      tbase = millis();
+      tbase = (word)millis();
   }
-  if ( posVal==0 && bpmI==1 && millis() > tbase+500UL ) { 
+  if ( posVal==0 && bpmI==1 && (word)millis() > tbase+500UL ) { 
       bpmI = 0;
-      tbase = millis();
+      tbase = (word)millis();
   }
+  
+  // cycle through hues, using extent to set value
+  static byte hue = 0;
+  leds[posVal] = CHSV(hue++, 255, bright );
+}
+
+void Animation::aCylonSimple(byte bright) {
+  // a colored dot sweeping back and forth, with fading trails
+
+  // bpm (rate of dot travel) changes with time
+  const byte bpm = 16; // 1/minute
+  
+  // set the wipe size
+  const word wipeBounds[] = {bpm, 1}; // bounds
+  static byte wipe = map(
+    beatsin16(1, 0, 65535), 0, 65535,
+    wipeBounds[0], wipeBounds[1]
+  ); 
+
+  // fade everything
+  fadeToBlackBy( leds, NUM_LEDS, wipe );
+
+  // set the speed the pixel travels, see: lib8tion.h
+  byte posVal = beatsin16(bpm, 0, (word)NUM_LEDS); 
   
   // cycle through hues, using extent to set value
   static byte hue = 0;

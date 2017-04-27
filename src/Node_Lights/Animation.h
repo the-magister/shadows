@@ -62,6 +62,7 @@ class Animation {
     
     // animation layer
     void aCylon(byte bright);
+    void aCylonSimple(byte bright);
     void aProjection(byte pos, byte extent);
     void aSolid(CRGB color);
     void aFire(byte pos, byte extent);

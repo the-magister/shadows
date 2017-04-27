@@ -32,26 +32,31 @@ Sound S;
 #define NUM_LEDS NUM_LEDS_PER_CORNER*N_RANGE
 CRGB leds[NUM_LEDS];
 // index to the correct nodes
-const byte cornerIndex[N_RANGE] = {NUM_LEDS_PER_CORNER*0, NUM_LEDS_PER_CORNER*2, NUM_LEDS_PER_CORNER*1};
+const byte cornerIndex[N_RANGE] = {NUM_LEDS_PER_CORNER*0, NUM_LEDS_PER_CORNER*1, NUM_LEDS_PER_CORNER*2};
 #define PIN_LED_CLK 3    // corner LED clock line
 #define PIN_LED_DATA 4    // corner LED data line
 // color correction options; see FastLED/color.h
 // #define COLOR_CORRECTION TypicalLEDStrip
 #define COLOR_CORRECTION TypicalSMD5050
 
-#define DEBUG_UPDATE 0
-#define DEBUG_DISTANCE 1
-#define DEBUG_CALIBRATE 0
+#define DEBUG_UPDATE 1
+#define DEBUG_DISTANCE 0
 #define DEBUG_ALTITUDE 0
 #define DEBUG_COLLINEAR 0
 #define DEBUG_AREA 0
 #define DEBUG_INTERVAL 0
 
 void setup() {
+  // Need to make sure do this immediately after startup.
+  // can't let the range finders go into "free ranging" mode or
+  // the calibration will get crappy.
+  digitalWrite(PIN_START_RANGE, LOW);
+  pinMode(PIN_START_RANGE, OUTPUT);
+  
   Serial.begin(115200);
 
   // start the radio
-  N.begin(&D);
+  N.begin(&D, 255, GROUPID, RF69_915MHZ, 5); // Higher power setting goofing analogRead()!!
 
   // wait enough time to get a reprogram signal
   Metro startupDelay(1000UL);
@@ -91,6 +96,23 @@ void loop() {
   // average the sensor readings
   L.update();
 
+  // update sound
+  S.update();
+
+  // update lights
+  static CHSV color(HUE_RED, 255, 255);
+  color.hue += 1;
+  if( N.state == M_PROGRAM ) color.hue = HUE_BLUE; // show we're programming
+  for( byte i=0; i<N_RANGE; i++ ) {
+    // assign value from distance
+    byte distance = map(D.D[i], 0, HL, 0, 255-12);
+    for( byte j=0; j<NUM_LEDS_PER_CORNER; j++ ) {
+      leds[cornerIndex[i]+j] = color;
+      leds[cornerIndex[i]+j].fadeLightBy( distance );
+    }
+  }
+  FastLED.show();
+
   // send
   if( N.state == M_PROGRAM ) {
     // just don't want to be locked out forever
@@ -100,33 +122,17 @@ void loop() {
 
   // send
   N.sendMessage();
-
-  // update sound
-  S.update();
-
-  // update lights
-  static CHSV color(HUE_RED, 255, 255);
-  color.hue += 1;
-  for( byte i=0; i<N_RANGE; i++ ) {
-    // assign value from distance
-    byte distance = map(D.D[i], 0, HL, 0, 255);
-    for( byte j=0; j<NUM_LEDS_PER_CORNER; j++ ) {
-      leds[cornerIndex[i]+j] = color;
-      leds[cornerIndex[i]+j].fadeLightBy( distance );
-    }
-  }
-  FastLED.show();
-
-  if( DEBUG_DISTANCE ) {
+  
+  if( DEBUG_UPDATE ) {
     for ( byte i = 0; i < N_RANGE; i++ ) {
-      Serial << F("S") << i << F(" range=") << D.D[i] << F("\t");
+      Serial << F("S") << i << F(" reading=") << L.reading[i] << F("\t");
     }
     Serial << endl;
   }
-
-  if( DEBUG_CALIBRATE ) {
+  
+  if( DEBUG_DISTANCE ) {
     for ( byte i = 0; i < N_RANGE; i++ ) {
-      Serial << F("S") << i << F(" min=") << L.minReading[i] << F(" max=") << L.maxReading[i] << F("\t");
+      Serial << F("S") << i << F(" range=") << D.D[i] << F("\t");
     }
     Serial << endl;
   }
@@ -152,5 +158,12 @@ void loop() {
     Serial << endl;
   }
 
-  delay(20);
+  static unsigned long tic = millis();
+  static unsigned long toc = millis();
+  if( DEBUG_INTERVAL ) {
+     tic = toc;
+     toc = millis();
+     Serial << F("Update interval (ms)=") << toc - tic << endl;
+  }
+
 }
