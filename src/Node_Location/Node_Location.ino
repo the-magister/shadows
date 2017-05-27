@@ -39,7 +39,7 @@ const byte cornerIndex[N_RANGE] = {NUM_LEDS_PER_CORNER*0, NUM_LEDS_PER_CORNER*1,
 // #define COLOR_CORRECTION TypicalLEDStrip
 #define COLOR_CORRECTION TypicalSMD5050
 
-#define DEBUG_UPDATE 1
+#define DEBUG_UPDATE 0
 #define DEBUG_DISTANCE 0
 #define DEBUG_ALTITUDE 0
 #define DEBUG_COLLINEAR 0
@@ -91,6 +91,20 @@ void loop() {
 
   if ( haveTraffic ) {
     Serial << F("RECV: "); N.showNetwork();
+  }
+
+  // @ KiwiBurn noted need for periodic reboot to the lights
+  static Metro rebootEvery(30UL * 1000UL);
+  if( objectInPlane() ) rebootEvery.reset();
+  if( rebootEvery.check() ) {
+    rebootEvery.reset();
+    N.state = M_REBOOT;
+    Serial << F("Reboot timer expired.  Rebooting.") << endl;
+    for(byte i=0;i<10; i++) {
+      N.sendState();
+      delay(5);
+    }  
+//    resetUsingWatchdog(true);
   }
 
   // average the sensor readings
@@ -167,3 +181,17 @@ void loop() {
   }
 
 }
+
+boolean objectInPlane() {
+
+  const word distInPlane = 0.7*(float)HL;
+
+  byte inPlane0 = D.D[0] <= distInPlane;
+  byte inPlane1 = D.D[1] <= distInPlane;
+  byte inPlane2 = D.D[2] <= distInPlane;
+
+  return( 
+    (inPlane0 + inPlane1 + inPlane2) >= 2
+  );
+}
+

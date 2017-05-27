@@ -180,14 +180,15 @@ void Animation::aCylonSimple(byte bright) {
   const byte bpm = 16; // 1/minute
   
   // set the wipe size
-  const word wipeBounds[] = {bpm, 1}; // bounds
-  static byte wipe = map(
-    beatsin16(1, 0, 65535), 0, 65535,
-    wipeBounds[0], wipeBounds[1]
-  ); 
+//  const word wipeBounds[] = {bpm, 1}; // bounds
+//  static byte wipe = map(
+//    beatsin16(1, 0, 65535), 0, 65535,
+//    wipeBounds[0], wipeBounds[1]
+//  ); 
 
   // fade everything
-  fadeToBlackBy( leds, NUM_LEDS, wipe );
+//  fadeToBlackBy( leds, NUM_LEDS, wipe );
+  fadeToBlackBy( leds, NUM_LEDS, bpm/4 );
 
   // set the speed the pixel travels, see: lib8tion.h
   byte posVal = beatsin16(bpm, 0, (word)NUM_LEDS); 
