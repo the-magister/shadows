@@ -1,64 +1,75 @@
 #include "Location.h"
 
+void Location::boot(byte sIndex, byte EN_PIN, byte RNG_PIN, byte PW_PIN) {
+
+  Serial << "Location.  Booting sensor " << sIndex << endl;
+
+  // for each sensor
+  digitalWrite(RNG_PIN, LOW);
+  digitalWrite(EN_PIN, LOW);
+  // I'm going to set the PW pin LOW, too, in case that's keeping the board powered
+  digitalWrite(PW_PIN, LOW);
+  
+  pinMode(RNG_PIN, OUTPUT);
+  pinMode(EN_PIN, OUTPUT);
+  pinMode(PW_PIN, OUTPUT);
+
+  // wait for depower
+  delay(500);
+
+  // calibrate
+  digitalWrite(EN_PIN, HIGH);
+  digitalWrite(RNG_PIN, HIGH);
+  delay(300);
+
+  // turn it off
+  digitalWrite(RNG_PIN, LOW);
+  delay(100);
+
+  // now, flip the PW pin back to INPUT
+  pinMode(PW_PIN, INPUT);
+}
+
 void Location::begin(Distances *D) {
   Serial << F("Location. startup.");
 
-  // has the effect of stopping any ongoing round-robin
-  digitalWrite(PIN_START_RANGE, LOW);
-  pinMode(PIN_START_RANGE, OUTPUT);
+  for( byte i=0; i<N_RANGE; i++ ) {
+    // boot sensor
+    boot(i, PIN_EN[i], PIN_RNG[i], PIN_PW[i]);
+    // set ranges to reasonable values
+    currRange[i] = HL;
+    avgRange[i] = HL;
+  }
 
-  // 250 ms after power up
-  delay(500);
-
-  // send a start pulse
-  digitalWrite(PIN_START_RANGE, HIGH);
-  delay(5);
-  digitalWrite(PIN_START_RANGE, LOW);
-
-  // flip to high-impediance pin state so as to not clobber the return round-robin inc.  
-  pinMode(PIN_START_RANGE, INPUT); 
-
+ 
   this->d = D;
-
-  analogReference(INTERNAL); // built-in reference, which is 1.1V on ATmega328
-  // readings are capping out at 220 with a 5V reference, or about 1.078V.
-  // so, the 1.1V reference is nearly perfect.
 
   Serial << F("Location. startup complete.") << endl;
 }
 
+word range(byte RNG_PIN, byte PW_PIN) {
 
-void Location::update() {
-// It takes about 100 microseconds (0.0001 s) to read an analog input, so the maximum reading rate is about 10,000 times a second.
+  digitalWrite(RNG_PIN, HIGH);
+  unsigned long val = pulseIn(PW_PIN, HIGH);
+  digitalWrite(RNG_PIN, LOW);
 
-  const byte nUp = 10;
-  unsigned long pool[N_RANGE] = {0,0,0};
-  
-  for( byte i=0; i<nUp; i++ ) {
-    for ( byte n = 0; n < N_RANGE; n++ ) {
-      pool[n] += analogRead(rangePin[n]);
-    }
+  // constrained to HL
+  return ( (word)constrain(val, 0, HL) );
+}
+
+void Location::update(byte smoothing) {
+  for( byte i=0; i<N_RANGE; i++ ) {
+    currRange[i] = range(PIN_RNG[i], PIN_PW[i]);
+    
+    avgRange[i] = (currRange[i] + avgRange[i]*smoothing)/(1+smoothing); 
   }
-  
-  for ( byte i = 0; i < N_RANGE; i++ ) {
-    reading[i] = pool[i] / nUp;
-    d->D[i] = constrain( reading[i], 0, HL );
-  }
-
-  // update the locations
-  calculateLocation();
 }
 
 void Location::calculateLocation() {
   // the distance measures to the right and left of the LED strips and
   // the known distance between the sensors form a triangle.
-
-  // cap the distance readings
-  // DANNE, I think we just need to cap the readings to not exceed HL to prevent Bad Math Happening.
-  for (byte i = 0; i < N_RANGE; i++) {
-    if ( d->D[i] > HL ) d->D[i] = HL;
-  }
-
+  for (byte i = 0; i < N_NODES; i++) d->D[i] = avgRange[i];
+   
   // altitude height.  the extent of the triangle's altitude.
   // these are the trilinear coordinates of the object.
   // https://en.wikipedia.org/wiki/Trilinear_coordinates

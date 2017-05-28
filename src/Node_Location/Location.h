@@ -7,9 +7,6 @@
 #include <Streaming.h>
 #include <Metro.h>
 
-#define PIN_START_RANGE 5 // trigger for ranging start; read the fps; note this is Dn
-const byte rangePin[N_RANGE] = { 7, 6, 5 }; // range from sonar 10, 11, 12, respectivel; note this is An
-
 /*
 Physical layout:
     ---- SL --->
@@ -31,25 +28,53 @@ Ones digit (with same tens digit):
 
 */
 
+const byte PIN_PW[] = {21, 17, 12};
+const byte PIN_RNG[] = {20, 16, 11};
+const byte PIN_EN[] = {22, 18, 13};
+const byte PIN_DATA[] = {19, 14, 10};
+
+/*
+// 22,21,20,19
+#define C0_PW   21    // wire to Sonar PW via shifter
+#define C0_RNG  20    // wire to Sonar RX via shifter
+#define C0_EN   22    // wire to Sonar +5 via shifter
+#define C0_DATA 19    // wire to lighting DATA IN via shifter
+
+// 18,17,16,14
+// skipping D15; has an LED on that pin.
+#define C1_PW   17    // wire to Sonar PW via shifter
+#define C1_RNG  16    // wire to Sonar RX via shifter
+#define C1_EN   18    // wire to Sonar +5 via shifter
+#define C1_DATA 14    // wire to lighting DATA IN via shifter
+
+// 13,12,11,10
+#define C2_PW   12    // wire to Sonar PW via shifter
+#define C2_RNG  11    // wire to Sonar RX via shifter
+#define C2_EN   13    // wire to Sonar +5 via shifter
+#define C2_DATA 10    // wire to lighting DATA IN via shifter
+*/
 
 class Location {
   public:
     // startup
     void begin(Distances *D);
 
-    // run an update; calls calculateLocation after.
-    void update();
-    word reading[N_RANGE]; // for debugging purposes.
-    
+    // run range finding
+    void update(byte smoothing=3);
+
+    // given the distances to the object, calculate the location of the object and push to D
+    void calculateLocation();
+   
+    // storage.  made external for others' use. 
+    unsigned long currRange[N_RANGE]; // value of last range
+    unsigned long avgRange[N_RANGE]; // smoothed ranges
+
   private:
     byte left(byte i);
     byte right(byte i);
 
     // store a pointer to the distance object
     Distances * d;
-
-    // given the distances to the object, calculate the location of the object
-    void calculateLocation();
 
     // helper functions
     unsigned long squared(word x);
@@ -62,6 +87,9 @@ class Location {
     word collinearBase(byte i);
     word collinearHeight(byte i);
     word area(byte i);
+
+    // sensor function
+    void boot(byte sIndex, byte EN_PIN, byte RNG_PIN, byte PW_PIN);
 
 };
 

@@ -27,8 +27,8 @@
 #define N_RANGE				3 // 
 
 // geometry of the devices, 16-bit
-const word SL = 774;	// side-length of the triangle; 2/sqrt(3) * HL
-const word HL = 670;	// altitude of the triangle; sqrt(3)/2 * SL
+const word HL = 10600;	// altitude of the triangle, as measured by the sensors
+const word SL = 12240;	// side-length of the triangle; 2/sqrt(3) * HL
 
 // distance information being transmitted
 struct Distances {
@@ -37,6 +37,10 @@ struct Distances {
   word Cb[N_NODES], Ch[N_NODES]; // object location relative to LEDs, collinear basis
   word Area[N_NODES]; // relative area of the triangle defined by the object and LEDs, relative to total area.
 };
+
+// data rate on the radio is 55.5555 kpbs or 55.555 bits per ms
+// 3*6*16 bit = 288 bit package
+// so ~ 5ms to send
 
 // system state messages
 enum systemState {

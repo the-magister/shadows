@@ -47,12 +47,6 @@ const byte cornerIndex[N_RANGE] = {NUM_LEDS_PER_CORNER*0, NUM_LEDS_PER_CORNER*1,
 #define DEBUG_INTERVAL 0
 
 void setup() {
-  // Need to make sure do this immediately after startup.
-  // can't let the range finders go into "free ranging" mode or
-  // the calibration will get crappy.
-  digitalWrite(PIN_START_RANGE, LOW);
-  pinMode(PIN_START_RANGE, OUTPUT);
-  
   Serial.begin(115200);
 
   // start the radio
@@ -107,9 +101,39 @@ void loop() {
 //    resetUsingWatchdog(true);
   }
 
+/*
+ * The range finders rely on precision timing as does the radio (via interrupts).  
+ * The ranging is blocking, but the radio work isn't.  
+ * So, we need to take care that the ranging and radio work do not coincide.
+ * 
+ * 1. get NEW ranging data
+ * 2. send LAST distance packet
+ * 3. calculate the NEW distance packet
+ * 4. update the corner lights and sound
+ */
+  
+  // make sure the distance packet is sent
+  const unsigned long sendTime = ceil((float)(sizeof(Distances)*8) / 55.55555);
+  static Metro sendLockout(sendTime);
+  while( !sendLockout.check());
+
   // average the sensor readings
   L.update();
 
+  // send
+  if( N.state == M_PROGRAM ) {
+    // just don't want to be locked out forever
+    if( backToNormalAfterProgram.check() ) N.state = M_NORMAL;
+    return;
+  }
+
+  // send
+  N.sendMessage();
+  sendLockout.reset();
+
+  // update position information
+  L.calculateLocation();
+  
   // update sound
   S.update();
 
@@ -127,19 +151,9 @@ void loop() {
   }
   FastLED.show();
 
-  // send
-  if( N.state == M_PROGRAM ) {
-    // just don't want to be locked out forever
-    if( backToNormalAfterProgram.check() ) N.state = M_NORMAL;
-    return;
-  }
-
-  // send
-  N.sendMessage();
-  
   if( DEBUG_UPDATE ) {
     for ( byte i = 0; i < N_RANGE; i++ ) {
-      Serial << F("S") << i << F(" reading=") << L.reading[i] << F("\t");
+      Serial << F("S") << i << F(" reading=") << L.currRange[i] << F("\t");
     }
     Serial << endl;
   }
