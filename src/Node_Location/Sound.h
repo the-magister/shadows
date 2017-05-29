@@ -7,10 +7,10 @@
 #include <SoftwareSerial.h>
 #include <Network.h>
 
-#define WAVE_RX 7 // Connect pin 7 to WAV Trigger RX
-#define WAVE_TX 6 // Connect pin 6 to WAV Trigger TX
+// Moteino MEGA A6=D30 A7=D31
+#define WAVE_RX 30 // Connect A6/D30 to WAV Trigger RX
+#define WAVE_TX 31 // Connect A7/D31 to WAV Trigger TX
 // make sure they share a Ground plane
-
 
 class Sound {
   public:

@@ -31,7 +31,7 @@ void Location::boot(byte sIndex, byte EN_PIN, byte RNG_PIN, byte PW_PIN) {
 }
 
 void Location::begin(Distances *D) {
-  Serial << F("Location. startup.");
+  Serial << F("Location. startup.") << endl;
 
   for( byte i=0; i<N_RANGE; i++ ) {
     // boot sensor

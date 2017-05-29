@@ -10,202 +10,175 @@
 #include <EEPROM.h>
 #include <FastLED.h>
 
-// Shadows specific libraries.
+// network and location information for LightSticks
 #include <Network.h>
-Network N;
-Distances D;
-#include "Location.h"
-Location L;
+Network Net;
+Distances Dist;
 
+// ultrasonic range finders
+#include "Location.h"
+Location Loc;
+
+// sound output
 #include "Sound.h"
 SoftwareSerial wavSerial(WAVE_TX, WAVE_RX);
-Sound S;
+Sound Sound;
 
-// Moteuino R4 pins already in use:
-//  D2, D10-13 - transceiver
-//  D9         - LED
-//  D8, D11-13 - flash
-
-#define LED_TYPE WS2801
-#define COLOR_ORDER RGB
-#define NUM_LEDS_PER_CORNER 2
-#define NUM_LEDS NUM_LEDS_PER_CORNER*N_RANGE
-CRGB leds[NUM_LEDS];
-// index to the correct nodes
-const byte cornerIndex[N_RANGE] = {NUM_LEDS_PER_CORNER*0, NUM_LEDS_PER_CORNER*1, NUM_LEDS_PER_CORNER*2};
-#define PIN_LED_CLK 3    // corner LED clock line
-#define PIN_LED_DATA 4    // corner LED data line
-// color correction options; see FastLED/color.h
-// #define COLOR_CORRECTION TypicalLEDStrip
-#define COLOR_CORRECTION TypicalSMD5050
+// corner and debug lighting
+#include "Lights.h"
+Lights Light;
 
 #define DEBUG_UPDATE 0
 #define DEBUG_DISTANCE 0
 #define DEBUG_ALTITUDE 0
 #define DEBUG_COLLINEAR 0
 #define DEBUG_AREA 0
-#define DEBUG_INTERVAL 0
+#define DEBUG_INTERVAL 1
 
 void setup() {
   Serial.begin(115200);
 
   // start the radio
-  N.begin(&D, 255, GROUPID, RF69_915MHZ, 5); // Higher power setting goofing analogRead()!!
+  Net.begin(&Dist, 255, GROUPID, RF69_915MHZ, 5); // Higher power setting goofing analogRead()!!
 
   // wait enough time to get a reprogram signal
   Metro startupDelay(1000UL);
-  while (! startupDelay.check()) N.update();
+  while (! startupDelay.check()) Net.update();
 
   // start the range finder
-  L.begin(&D);
+  Loc.begin(&Dist);
 
   // start the sound
-  S.begin(&D, &wavSerial);
+  Sound.begin(&Dist, &wavSerial);
 
-  // tell FastLED about the LED strip configuration
-  FastLED.addLeds<LED_TYPE,PIN_LED_DATA,PIN_LED_CLK,COLOR_ORDER>(leds, NUM_LEDS).setCorrection(COLOR_CORRECTION);
-  // set master brightness control
-  FastLED.setBrightness(255);
+  // start the corner lights
+  Light.begin(&Dist);
 }
 
 void loop() {
-  // update the radio traffic
-  boolean haveTraffic = N.update();
+  // don't broadcast packets if OTA programming is occuring
   static Metro backToNormalAfterProgram(5000UL);
-  if( haveTraffic && N.state==M_PROGRAM ) {
-    backToNormalAfterProgram.reset();
-  }
-
-  // configure to calibrate once
-  if ( N.state == M_CALIBRATE ) {   
-     L.begin(&D);
-     delay(100);
-     N.state = M_NORMAL;
-  }
-
+  // update the radio traffic
+  boolean haveTraffic = Net.update();
   if ( haveTraffic ) {
-    Serial << F("RECV: "); N.showNetwork();
+    Serial << F("RECV: "); Net.showNetwork();
+
+    if ( Net.state == M_PROGRAM ) {
+      // OTA programming is occuring, so reset send lockout timer
+      backToNormalAfterProgram.reset();
+    } else if ( Net.state == M_CALIBRATE ) {
+      // reboot the sensors
+      Loc.begin(&Dist);
+      Net.state = M_NORMAL;
+    }
+  }
+  // we don't want to get stuck in programming mode if we miss the reset to M_NORMAL, so have a timer tick down
+  if ( Net.state == M_PROGRAM && backToNormalAfterProgram.check() ) {
+    // just don't want to be locked out forever
+    Net.state = M_NORMAL;
   }
 
   // @ KiwiBurn noted need for periodic reboot to the lights
   static Metro rebootEvery(30UL * 1000UL);
-  if( objectInPlane() ) rebootEvery.reset();
-  if( rebootEvery.check() ) {
+  if ( objectInPlane() ) rebootEvery.reset();
+  if ( rebootEvery.check() ) {
     rebootEvery.reset();
-    N.state = M_REBOOT;
-    Serial << F("Reboot timer expired.  Rebooting.") << endl;
-    for(byte i=0;i<10; i++) {
-      N.sendState();
+    Net.state = M_REBOOT;
+    Serial << F("Reboot timer expireDist.  Rebooting.") << endl;
+    for (byte i = 0; i < 10; i++) {
+      Net.sendState();
       delay(5);
-    }  
-//    resetUsingWatchdog(true);
+    }
+    //    resetUsingWatchdog(true);
   }
 
-/*
- * The range finders rely on precision timing as does the radio (via interrupts).  
- * The ranging is blocking, but the radio work isn't.  
- * So, we need to take care that the ranging and radio work do not coincide.
- * 
- * 1. get NEW ranging data
- * 2. send LAST distance packet
- * 3. calculate the NEW distance packet
- * 4. update the corner lights and sound
- */
-  
+  /*
+     The range finders rely on precision timing as does the radio (via interrupts).
+     The ranging is blocking, but the radio work isn't.
+     So, we need to take care that the ranging and radio work do not coincide.
+
+     1. get NEW ranging data
+     2. send LAST distance packet
+     3. calculate the NEW distance packet
+     4. update the corner lights and sound
+  */
+
   // make sure the distance packet is sent
-  const unsigned long sendTime = ceil((float)(sizeof(Distances)*8) / 55.55555);
+  const unsigned long sendTime = ceil((float)(sizeof(Distances) * 8) / 55.55555);
   static Metro sendLockout(sendTime);
-  while( !sendLockout.check());
+  while ( !sendLockout.check());
 
   // average the sensor readings
-  L.update();
+  Loc.update();
 
   // send
-  if( N.state == M_PROGRAM ) {
-    // just don't want to be locked out forever
-    if( backToNormalAfterProgram.check() ) N.state = M_NORMAL;
-    return;
-  }
-
-  // send
-  N.sendMessage();
+  if( Net.state == M_NORMAL ) Net.sendMessage();
   sendLockout.reset();
 
   // update position information
-  L.calculateLocation();
-  
+  Loc.calculateLocation();
+
   // update sound
-  S.update();
+  Sound.update();
 
   // update lights
-  static CHSV color(HUE_RED, 255, 255);
-  color.hue += 1;
-  if( N.state == M_PROGRAM ) color.hue = HUE_BLUE; // show we're programming
-  for( byte i=0; i<N_RANGE; i++ ) {
-    // assign value from distance
-    byte distance = map(D.D[i], 0, HL, 0, 255-12);
-    for( byte j=0; j<NUM_LEDS_PER_CORNER; j++ ) {
-      leds[cornerIndex[i]+j] = color;
-      leds[cornerIndex[i]+j].fadeLightBy( distance );
-    }
-  }
-  FastLED.show();
+  Light.update(Net.state);
 
-  if( DEBUG_UPDATE ) {
+  if ( DEBUG_UPDATE ) {
     for ( byte i = 0; i < N_RANGE; i++ ) {
-      Serial << F("S") << i << F(" reading=") << L.currRange[i] << F("\t");
+      Serial << F("S") << i << F(" reading=") << Loc.currRange[i] << F("\t");
     }
     Serial << endl;
   }
-  
-  if( DEBUG_DISTANCE ) {
+
+  if ( DEBUG_DISTANCE ) {
     for ( byte i = 0; i < N_RANGE; i++ ) {
-      Serial << F("S") << i << F(" range=") << D.D[i] << F("\t");
+      Serial << F("S") << i << F(" range=") << Dist.D[i] << F("\t");
     }
     Serial << endl;
   }
 
-  if( DEBUG_ALTITUDE ) {
+  if ( DEBUG_ALTITUDE ) {
     for ( byte i = 0; i < N_NODES; i++ ) {
-      Serial << F("N") << i << F(" Ab=") << D.Ab[i] << F("\t") << F("Ah=") << D.Ah[i] << F("\t\t");
-    }
-    Serial << endl;
-  }
-  
-  if( DEBUG_COLLINEAR ) {
-    for ( byte i = 0; i < N_NODES; i++ ) {
-      Serial << F("N") << i << F(" Cb=") << D.Cb[i] << F("\t") << F("Ch=") << D.Ch[i] << F("\t\t");
+      Serial << F("N") << i << F(" Ab=") << Dist.Ab[i] << F("\t") << F("Ah=") << Dist.Ah[i] << F("\t\t");
     }
     Serial << endl;
   }
 
-  if( DEBUG_AREA ) {
+  if ( DEBUG_COLLINEAR ) {
     for ( byte i = 0; i < N_NODES; i++ ) {
-      Serial << F("N") << i << F(" Area=") << D.Area[i] << F("\t\t");
+      Serial << F("N") << i << F(" Cb=") << Dist.Cb[i] << F("\t") << F("Ch=") << Dist.Ch[i] << F("\t\t");
+    }
+    Serial << endl;
+  }
+
+  if ( DEBUG_AREA ) {
+    for ( byte i = 0; i < N_NODES; i++ ) {
+      Serial << F("N") << i << F(" Area=") << Dist.Area[i] << F("\t\t");
     }
     Serial << endl;
   }
 
   static unsigned long tic = millis();
   static unsigned long toc = millis();
-  if( DEBUG_INTERVAL ) {
-     tic = toc;
-     toc = millis();
-     Serial << F("Update interval (ms)=") << toc - tic << endl;
+  if ( DEBUG_INTERVAL ) {
+    tic = toc;
+    toc = millis();
+    Serial << F("Update interval (ms)=") << toc - tic << endl;
   }
 
 }
 
 boolean objectInPlane() {
 
-  const word distInPlane = 0.7*(float)HL;
+  const word distInPlane = 0.7 * (float)HL;
 
-  byte inPlane0 = D.D[0] <= distInPlane;
-  byte inPlane1 = D.D[1] <= distInPlane;
-  byte inPlane2 = D.D[2] <= distInPlane;
+  byte inPlane0 = Dist.D[0] <= distInPlane;
+  byte inPlane1 = Dist.D[1] <= distInPlane;
+  byte inPlane2 = Dist.D[2] <= distInPlane;
 
-  return( 
-    (inPlane0 + inPlane1 + inPlane2) >= 2
-  );
+  return (
+           (inPlane0 + inPlane1 + inPlane2) >= 2
+         );
 }
 
