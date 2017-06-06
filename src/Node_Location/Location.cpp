@@ -9,7 +9,7 @@ void Location::boot(byte sIndex, byte EN_PIN, byte RNG_PIN, byte PW_PIN) {
   digitalWrite(EN_PIN, LOW);
   // I'm going to set the PW pin LOW, too, in case that's keeping the board powered
   digitalWrite(PW_PIN, LOW);
-  
+
   pinMode(RNG_PIN, OUTPUT);
   pinMode(EN_PIN, OUTPUT);
   pinMode(PW_PIN, OUTPUT);
@@ -33,7 +33,7 @@ void Location::boot(byte sIndex, byte EN_PIN, byte RNG_PIN, byte PW_PIN) {
 void Location::begin(Distances *D) {
   Serial << F("Location. startup.") << endl;
 
-  for( byte i=0; i<N_RANGE; i++ ) {
+  for ( byte i = 0; i < N_RANGE; i++ ) {
     // boot sensor
     boot(i, PIN_EN[i], PIN_RNG[i], PIN_PW[i]);
     // set ranges to reasonable values
@@ -41,7 +41,7 @@ void Location::begin(Distances *D) {
     avgRange[i] = HL;
   }
 
- 
+
   this->d = D;
 
   Serial << F("Location. startup complete.") << endl;
@@ -58,18 +58,18 @@ word range(byte RNG_PIN, byte PW_PIN) {
 }
 
 void Location::update(byte smoothing) {
-  for( byte i=0; i<N_RANGE; i++ ) {
+  for ( byte i = 0; i < N_RANGE; i++ ) {
     currRange[i] = range(PIN_RNG[i], PIN_PW[i]);
-    
-    avgRange[i] = (currRange[i] + avgRange[i]*smoothing)/(1+smoothing); 
+
+    avgRange[i] = (currRange[i] + avgRange[i] * smoothing) / (1 + smoothing);
   }
 }
 
 void Location::calculateLocation() {
   // the distance measures to the right and left of the LED strips and
   // the known distance between the sensors form a triangle.
-  for (byte i = 0; i < N_NODES; i++) d->D[i] = avgRange[i];
-   
+  for (byte i = 0; i < N_NODES; i++) d->D[Index[i]] = avgRange[i];
+
   // altitude height.  the extent of the triangle's altitude.
   // these are the trilinear coordinates of the object.
   // https://en.wikipedia.org/wiki/Trilinear_coordinates
@@ -115,7 +115,7 @@ word Location::altitudeHeight(byte i) {
   //  Serial << F("i=") << i << F("\ts=") << s << F("\tpart1=") << part1 << F("\tpart2=") << part2 << endl;
 
   unsigned long tmp = 2UL * part1 * part2;
-  return ( tmp / (unsigned long)SL ); 
+  return ( tmp / (unsigned long)SL );
 }
 
 // use Vivani's theorem to adjust the sum of the heights to total height.

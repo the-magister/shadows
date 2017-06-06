@@ -1,3 +1,4 @@
+// Compile for MoteinoMEGA
 #include <Streaming.h>
 #include <Metro.h>
 #include <wavTrigger.h>
@@ -29,17 +30,17 @@ Sound Sound;
 Lights Light;
 
 #define DEBUG_UPDATE 0
-#define DEBUG_DISTANCE 0
+#define DEBUG_DISTANCE 1
 #define DEBUG_ALTITUDE 0
 #define DEBUG_COLLINEAR 0
 #define DEBUG_AREA 0
-#define DEBUG_INTERVAL 1
+#define DEBUG_INTERVAL 0
 
 void setup() {
   Serial.begin(115200);
 
   // start the radio
-  Net.begin(&Dist, 255, GROUPID, RF69_915MHZ, 5); // Higher power setting goofing analogRead()!!
+  Net.begin(&Dist, 255, GROUPID, RF69_915MHZ, 15); // Higher power setting goofing analogRead()!!
 
   // wait enough time to get a reprogram signal
   Metro startupDelay(1000UL);

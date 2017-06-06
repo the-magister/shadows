@@ -1,3 +1,4 @@
+// Compile for Arduino Uno
 #include <Streaming.h>
 #include <Metro.h>
 
@@ -35,6 +36,8 @@ byte window = 3; // how many sensor measurements do we average to smooth Cb and 
 // track state
 systemState lastState;
 
+const word distInPlane = 0.7*(float)HL;
+
 void setup() {
 
   Serial.begin(115200);
@@ -49,11 +52,10 @@ void setup() {
   // startup animation
   A.begin();
 
+  Serial << F("Startup.  in-plane threshold: ") << distInPlane << endl;
 }
 
 boolean objectInPlane() {
-
-  const word distInPlane = 0.7*(float)HL;
 
   byte inPlane0 = D.D[0] <= distInPlane;
   byte inPlane1 = D.D[1] <= distInPlane;
@@ -71,9 +73,10 @@ void loop() {
     Cb = ((window-1)*Cb + D.Cb[N.myIndex])/window;
     Ch = ((window-1)*Ch + D.Ch[N.myIndex])/window;
 
-//    Serial << F("Cb=") << L.Cb[N.myIndex] << F(" avg=") << Cb;
-//    Serial << F("\tCh=") << L.Ch[N.myIndex] << F(" avg=") << Ch;
-//    Serial << endl;
+    Serial << F("D=") << D.D[N.myIndex];
+    Serial << F("\tCb=") << D.Cb[N.myIndex] << F(" avg=") << Cb;
+    Serial << F("\tCh=") << D.Ch[N.myIndex] << F(" avg=") << Ch;
+    Serial << endl;
   }
 
   // check for system mode changes

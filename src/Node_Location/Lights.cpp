@@ -1,9 +1,11 @@
 #include "Lights.h"
+#include "Location.h" // for Index
 
+//                         GRN, YEL, BLU
 //const byte PIN_DATA[] = {19, 14, 10};
-const byte PIN_DATA0 = 19;
-const byte PIN_DATA1 = 14;
-const byte PIN_DATA2 = 10;
+const byte PIN_DATA0 = 19; // green
+const byte PIN_DATA1 = 14; // yellow
+const byte PIN_DATA2 = 10; // blue
 #define NUM_CORNER 8
 
 const byte PIN_DATA_DEBUG = 24; // A0=D24 
@@ -33,7 +35,7 @@ void Lights::begin(Distances *D) {
   Serial << F("Lights. startup complete.") << endl;
 }
 
-
+//extern const byte Index[N_RANGE]; // defined in Location.h
 void Lights::update(systemState state) {
 
   static CHSV normalColor(HUE_RED, 255, 255);
@@ -49,7 +51,9 @@ void Lights::update(systemState state) {
   // for each distance reading
   for( byte i=0; i<N_RANGE; i++ ) {
     // assign value from distance
-    byte distance = map(d->D[i], 0, HL, 0, 255-12);
+//    byte distance = map(d->D[i], 0, HL, 0, 255-12);
+    // unwind the indexing
+    byte distance = map(d->D[Index[i]], 0, HL, 0, 255-12);
 
     // assign corner
     for( byte j=0; j<NUM_CORNER; j++ ) {

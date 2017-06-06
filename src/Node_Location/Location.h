@@ -31,7 +31,10 @@ Ones digit (with same tens digit):
 const byte PIN_PW[] = {21, 17, 12};
 const byte PIN_RNG[] = {20, 16, 11};
 const byte PIN_EN[] = {22, 18, 13};
-const byte PIN_DATA[] = {19, 14, 10};
+// set in Lights.h
+// const byte PIN_DATA[] = {19, 14, 10};
+// describes how to map the corner distances to the trig
+const byte Index[] = {2, 1, 0};
 
 /*
 // 22,21,20,19
