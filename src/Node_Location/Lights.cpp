@@ -1,11 +1,7 @@
 #include "Lights.h"
 #include "Location.h" // for Index
 
-//                         GRN, YEL, BLU
-//const byte PIN_DATA[] = {19, 14, 10};
-const byte PIN_DATA0 = 19; // green
-const byte PIN_DATA1 = 14; // yellow
-const byte PIN_DATA2 = 10; // blue
+// LED count in the corners
 #define NUM_CORNER 8
 
 const byte PIN_DATA_DEBUG = 24; // A0=D24 
@@ -21,6 +17,7 @@ void Lights::begin(Distances *D) {
   Serial << F("Lights. startup.") << endl;
 
   // corner lights
+  // PIN_DATA defined in Location.h
   FastLED.addLeds<WS2811, PIN_DATA0, RGB>(corner[0], NUM_CORNER).setCorrection(TypicalSMD5050);
   FastLED.addLeds<WS2811, PIN_DATA1, RGB>(corner[1], NUM_CORNER).setCorrection(TypicalSMD5050);
   FastLED.addLeds<WS2811, PIN_DATA2, RGB>(corner[2], NUM_CORNER).setCorrection(TypicalSMD5050);
@@ -53,7 +50,7 @@ void Lights::update(systemState state) {
     // assign value from distance
 //    byte distance = map(d->D[i], 0, HL, 0, 255-12);
     // unwind the indexing
-    byte distance = map(d->D[Index[i]], 0, HL, 0, 255-12);
+    byte distance = map(d->D[i], 0, HL, 0, 255-12);
 
     // assign corner
     for( byte j=0; j<NUM_CORNER; j++ ) {

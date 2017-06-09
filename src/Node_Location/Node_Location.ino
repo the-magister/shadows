@@ -39,6 +39,10 @@ Lights Light;
 void setup() {
   Serial.begin(115200);
 
+  Serial << F("Startup.") << endl;
+
+  delay(500);
+  
   // start the radio
   Net.begin(&Dist, 255, GROUPID, RF69_915MHZ, 15); // Higher power setting goofing analogRead()!!
 
@@ -54,6 +58,8 @@ void setup() {
 
   // start the corner lights
   Light.begin(&Dist);
+
+  Serial << F("Startup complete.") << endl;
 }
 
 void loop() {
@@ -74,7 +80,7 @@ void loop() {
     }
   }
   // we don't want to get stuck in programming mode if we miss the reset to M_NORMAL, so have a timer tick down
-  if ( Net.state == M_PROGRAM && backToNormalAfterProgram.check() ) {
+  if ( Net.state != M_NORMAL && backToNormalAfterProgram.check() ) {
     // just don't want to be locked out forever
     Net.state = M_NORMAL;
   }
@@ -113,8 +119,12 @@ void loop() {
   Loc.update();
 
   // send
-  if( Net.state == M_NORMAL ) Net.sendMessage();
-  sendLockout.reset();
+  if( Net.state == M_NORMAL ) {
+    Net.sendMessage();
+    sendLockout.reset();
+  } else {
+    Serial << "Skipping send.  Network state=" << Net.state << endl;
+  }
 
   // update position information
   Loc.calculateLocation();

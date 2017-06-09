@@ -10,14 +10,14 @@
 /*
 Physical layout:
     ---- SL --->
-         20
+ (YEL)   20    (GRN)
    11 -------- 12   ^
      \        /     |
       \      /      HL
     22 \    / 21    |
         \  /        |
-         10         |
-
+         10(BLU)    |
+         
 Tens digit:
   1 = nodes with ultrasound rangefinders (Node_Location)
   2 = nodes with RGB LED strips (Node_Light)
@@ -27,16 +27,30 @@ Ones digit (with same tens digit):
   -1 (modulo) = "to my left"/previous
 
 */
-
+/*
+                    // GRN, YEL, BLU  
 const byte PIN_PW[] = {21, 17, 12};
 const byte PIN_RNG[] = {20, 16, 11};
 const byte PIN_EN[] = {22, 18, 13};
-// set in Lights.h
-// const byte PIN_DATA[] = {19, 14, 10};
-// describes how to map the corner distances to the trig
-const byte Index[] = {2, 1, 0};
+// hinky #defines to pacify FastLEDs constant expression neediness.
+#define PIN_DATA0 19
+#define PIN_DATA1 14
+#define PIN_DATA2 10
+const byte PIN_DATA[] = {PIN_DATA0, PIN_DATA1, PIN_DATA2};
+*/
+                    // BLU, YEL, GRN  
+const byte PIN_PW[] = {12, 17, 21};
+const byte PIN_RNG[] = {11, 16, 20};
+const byte PIN_EN[] = {13, 18, 22};
+// hinky #defines to pacify FastLEDs constant expression neediness.
+#define PIN_DATA0 10
+#define PIN_DATA1 14
+#define PIN_DATA2 19
+const byte PIN_DATA[] = {PIN_DATA0, PIN_DATA1, PIN_DATA2};
+
 
 /*
+
 // 22,21,20,19
 #define C0_PW   21    // wire to Sonar PW via shifter
 #define C0_RNG  20    // wire to Sonar RX via shifter
@@ -82,7 +96,10 @@ class Location {
     // helper functions
     unsigned long squared(word x);
     word squareRoot(unsigned long x);
-
+    unsigned long safeSub(unsigned long a, unsigned long b);
+    unsigned long safeSub(unsigned long a, word b);
+    word safeSub(word a, word b);
+    
     word semiPerimeter(byte i);
     word altitudeHeight(byte i);
     void correctAltitudeHeight();
@@ -93,6 +110,7 @@ class Location {
 
     // sensor function
     void boot(byte sIndex, byte EN_PIN, byte RNG_PIN, byte PW_PIN);
+
 
 };
 

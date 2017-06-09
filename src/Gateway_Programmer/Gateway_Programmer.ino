@@ -69,13 +69,13 @@ void setup() {
   Serial.begin(115200);
 
   N.begin(&D, PROGRAMMER_NODE);
- 
+
   Serial.println("Start wireless gateway...");
 }
 
 void loop() {
   byte inputLen = 0;
-  if( Serial.available() > 0 ) 
+  if ( Serial.available() > 0 )
     inputLen = readSerialLine(input, 10, 64, 100); //readSerialLine(char* input, char endOfLineChar=10, byte maxLength=64, uint16_t timeout=1000);
 
   if (inputLen == 4 && input[0] == 'F' && input[1] == 'L' && input[2] == 'X' && input[3] == '?') {
@@ -84,10 +84,10 @@ void loop() {
     } else {
       // and let the nodes know a programming string is coming
       sendMessage(messageProgram);
-      
+
       boolean success = CheckForSerialHEX((byte*)input, inputLen, N.radio, targetID, TIMEOUT, ACK_TIME, false);
-      if( success ) sendMessage(messageReboot);
-      
+      if ( success ) sendMessage(messageReboot);
+
     }
   } else if (inputLen > 3 && inputLen <= 6 && input[0] == 'T' && input[1] == 'O' && input[2] == ':')  {
     byte newTarget = 0;
@@ -105,7 +105,7 @@ void loop() {
       Serial.println(":OK");
       // and let the nodes know a programming string is coming
       sendMessage(messageProgram);
-      
+
     } else {
       Serial.print(input);
       Serial.print(":INV");
@@ -117,13 +117,13 @@ void loop() {
     distance = ! distance;
     Serial << F("Distance: ") << distance << endl;
   } else if (inputLen == 2 && input[0] == 'C' && input[1] == 'A') {
-    sendMessage(messageCalibrate);   
+    sendMessage(messageCalibrate);
     Serial << F("[CA]libration operation Message") << endl;
     delay(1000);
-    sendMessage(messageNormal);   
+    sendMessage(messageNormal);
     Serial << F("[NO]ormal operation Message") << endl;
   } else if (inputLen == 2 && input[0] == 'N' && input[1] == 'O') {
-    sendMessage(messageNormal);   
+    sendMessage(messageNormal);
     Serial << F("[NO]ormal operation Message") << endl;
   } else if (inputLen == 2 && input[0] == 'P' && input[1] == 'R') {
     sendMessage(messageProgram);
@@ -141,32 +141,40 @@ void loop() {
     Serial << F("[RE]boot programming Message") << endl;
   }
 
-  if( N.update() ) {
-    
-    if( sniff ) N.showNetwork();
-    
-    if( distance ) {
-      Serial << F("Distance:\td0=") << D.D[0] << F("\td1=") << D.D[1] << F("\td2=") << D.D[2] << endl;
+  if ( N.update() ) {
+
+    if ( sniff ) {
+      for ( byte i = 0; i < N_NODES; i++ ) {
+        Serial << F("N") << i << F(" Cb=") << D.Cb[i] << F("\t") << F("Ch=") << D.Ch[i] << F("\t\t");
+      }
+      Serial << endl;
     }
-    
+
+    if ( distance ) {
+      for ( byte i = 0; i < N_RANGE; i++ ) {
+        Serial << F("S") << i << F(" D=") << D.D[i] << F("\t");
+      }
+      Serial << endl;
+    }
+
     static unsigned long cycleTime = 50UL;
-    
-    if( N.senderNodeID == 10 ) {
+
+    if ( N.senderNodeID == 10 ) {
       static unsigned long then = millis();
       unsigned long now = millis();
-      cycleTime = (9*cycleTime + now-then)/10;
+      cycleTime = (9 * cycleTime + now - then) / 10;
       then = now;
     }
 
     static byte loopCount = 0;
-    if( loopCount++ >= 100 ) {
+    if ( loopCount++ >= 100 ) {
       Serial << F("Cycle time (ms)=") << cycleTime;
-      Serial << F("\tFrequency (Hz)=") << 1.0/((float)cycleTime/1000.0) << endl;      
+      Serial << F("\tFrequency (Hz)=") << 1.0 / ((float)cycleTime / 1000.0) << endl;
       loopCount = 0;
     }
 
     Blink(LED, 5); //heartbeat
-    
+
   }
 }
 
@@ -180,9 +188,9 @@ void Blink(byte PIN, int DELAY_MS)
 
 void sendMessage(systemState msg) {
   N.state = msg;
-  for(byte i=0;i<10; i++) {
+  for (byte i = 0; i < 10; i++) {
     N.sendState();
     delay(5);
-  }  
+  }
 }
 

@@ -68,7 +68,7 @@ void Location::update(byte smoothing) {
 void Location::calculateLocation() {
   // the distance measures to the right and left of the LED strips and
   // the known distance between the sensors form a triangle.
-  for (byte i = 0; i < N_NODES; i++) d->D[Index[i]] = avgRange[i];
+  for (byte i = 0; i < N_NODES; i++) d->D[i] = avgRange[i];
 
   // altitude height.  the extent of the triangle's altitude.
   // these are the trilinear coordinates of the object.
@@ -99,6 +99,7 @@ void Location::calculateLocation() {
 
 // semiperimiter calculation
 word Location::semiPerimeter(byte i) {
+  // sum of three words can't overflow.
   unsigned long twoSP = SL + d->D[left(i)] + d->D[right(i)];
   return ( twoSP >> 1 ); // >>1 is /2
 }
@@ -107,15 +108,22 @@ word Location::semiPerimeter(byte i) {
 // use Pythagorean's theorem to calculte the altitude
 word Location::altitudeHeight(byte i) {
   // use right-i and left-i distance
-  if ( d->D[left(i)] + d->D[right(i)] < SL ) return ( 0 );
+  unsigned long dLeft = d->D[left(i)];
+  unsigned long dRight = d->D[right(i)];
+  if ( dLeft + dRight < SL ) return ( 0 );
 
   unsigned long s = semiPerimeter(i);
-  unsigned long part1 = squareRoot(s * (s - d->D[left(i)]));
-  unsigned long part2 = squareRoot((s - SL) * (s - d->D[right(i)]));
+  unsigned long part1 = squareRoot(s * safeSub(s,dLeft));
+  unsigned long part2 = squareRoot(safeSub(s,SL) * safeSub(s,dRight));
   //  Serial << F("i=") << i << F("\ts=") << s << F("\tpart1=") << part1 << F("\tpart2=") << part2 << endl;
 
-  unsigned long tmp = 2UL * part1 * part2;
-  return ( tmp / (unsigned long)SL );
+  unsigned long tmp = part1 * part2;
+  if( (tmp * 2UL) < tmp ) {
+    // crap.  we'd overflowed.
+    Serial << F("Location::altitudeHeight(") << i << F(") overflow.") << endl;
+    return ( 2UL * ( tmp / (unsigned long)SL ) );
+  }
+  return ( 2UL * tmp / (unsigned long)SL );
 }
 
 // use Vivani's theorem to adjust the sum of the heights to total height.
@@ -124,8 +132,12 @@ word Location::altitudeHeight(byte i) {
 void Location::correctAltitudeHeight() {
 
   // compute the difference in sum of heights from HL
-  int deltaAh = HL;
-  for (byte i = 0; i < N_NODES; i++) deltaAh -= d->Ah[i];
+//  int deltaAh = HL;
+//  for (byte i = 0; i < N_NODES; i++) deltaAh -= d->Ah[i];
+
+  unsigned long totalAh = 0;
+  for (byte i = 0; i < N_NODES; i++) totalAh += d->Ah[i];
+  int deltaAh = safeSub((unsigned long)HL, totalAh);
   //  Serial << F("deltaAh=") << deltaAh << endl;
 
   // are we done?
@@ -161,7 +173,7 @@ word Location::altitudeBase(byte i) {
 
   // use left-i distance and ith height
   return (
-           squareRoot( squared(d->D[left(i)]) - squared(d->Ah[i]) )
+           squareRoot( safeSub( squared(d->D[left(i)]), squared(d->Ah[i]) ) )
          );
 }
 
@@ -185,8 +197,8 @@ word Location::collinearBase(byte i) {
 word Location::collinearHeight(byte i) {
   // use i altitude height and base; i collinear base
   return ( d->Cb[i] >= d->Ab[i] ? // unsigned, so careful of order
-           squareRoot( squared(d->Ah[i]) + squared(d->Cb[i] - d->Ab[i]) ) :
-           squareRoot( squared(d->Ah[i]) + squared(d->Ab[i] - d->Cb[i]) )
+           squareRoot( squared(d->Ah[i]) + squared(safeSub(d->Cb[i], d->Ab[i])) ) :
+           squareRoot( squared(d->Ah[i]) + squared(safeSub(d->Ab[i], d->Cb[i])) )
          );
 }
 
@@ -205,6 +217,20 @@ word Location::area(byte i) {
 }
 
 
+unsigned long Location::safeSub(unsigned long a, unsigned long b) {
+  if( b>a ) return(0);
+  return(a-b);
+}
+unsigned long Location::safeSub(unsigned long a, word b) {
+  if( b>a ) return(0);
+  return(a-b);
+}
+word Location::safeSub(word a, word b) {
+  if( b>a ) return(0);
+  return(a-b);
+}
+
+
 unsigned long Location::squared(word x) {
   // taking care to promote operand
   return (
@@ -214,6 +240,8 @@ unsigned long Location::squared(word x) {
 
 // From: http://stackoverflow.com/questions/1100090/looking-for-an-efficient-integer-square-root-algorithm-for-arm-thumb2
 word Location::squareRoot(unsigned long x) {
+  if( x==0 ) return(0); // shouldn't happen, but...
+  
   unsigned long op  = x;
   unsigned long res = 0;
   unsigned long one = 1uL << 30; // The second-to-top bit is set: use 1u << 14 for uint16_t type; use 1uL<<30 for uint32_t type

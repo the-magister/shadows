@@ -28,10 +28,8 @@ State inPlane = State(inPlaneUpdate); // sensors are picking up an object, and i
 FSM S = FSM(idle); // start idle
 
 // track the average of Ch and Cb
-unsigned long Ch = HL;
+unsigned long Ch = SL;
 unsigned long Cb = HL;
-byte window = 3; // how many sensor measurements do we average to smooth Cb and Ch?
-// each read is about 50 ms
 
 // track state
 systemState lastState;
@@ -70,12 +68,12 @@ void loop() {
   // update the radio traffic
   if( N.update() ) {
     // running average
-    Cb = ((window-1)*Cb + D.Cb[N.myIndex])/window;
-    Ch = ((window-1)*Ch + D.Ch[N.myIndex])/window;
+    Cb = D.Cb[N.myIndex];
+    Ch = D.Ch[N.myIndex];
 
     Serial << F("D=") << D.D[N.myIndex];
-    Serial << F("\tCb=") << D.Cb[N.myIndex] << F(" avg=") << Cb;
-    Serial << F("\tCh=") << D.Ch[N.myIndex] << F(" avg=") << Ch;
+    Serial << F("\tCb=") << D.Cb[N.myIndex];
+    Serial << F("\tCh=") << D.Ch[N.myIndex];
     Serial << endl;
   }
 
@@ -143,7 +141,7 @@ void inPlaneUpdate() {
   );
 
   // check for state changes
-  static Metro goIdleTimeout(500UL);
+  static Metro goIdleTimeout(1000UL);
   if ( objectInPlane() ) goIdleTimeout.reset();
 
   // nothing to see here or no longer in normal operation?
