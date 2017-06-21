@@ -116,7 +116,8 @@ void loop() {
   while ( !sendLockout.check());
 
   // average the sensor readings
-  Loc.update();
+  const byte smoothing = 3;
+  Loc.update(smoothing);
 
   // send
   if( Net.state == M_NORMAL ) {

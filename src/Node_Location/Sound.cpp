@@ -41,11 +41,15 @@ void Sound::begin(Distances *D, SoftwareSerial *S) {
   this->d = D;
 }
 void Sound::update() {
+  const float power = 1.5;
+  const unsigned long scale = pow(HL, power);
+  
   for( byte i=0; i<N_RANGE; i++ ) {
-    int mapping = map(d->D[i], 0, HL, trackGain, trackGain-30);
+    int mapping = map((unsigned long)pow(d->D[i],power), 0UL, scale, trackGain, trackGain-30);
     wav.trackGain(track[i], mapping);
 
-//    Serial << F("t=") << i << F(" d=") << distance << F(" m=") << mapping << F("\t");
+//    Serial << F("t=") << i << F(" d=") << d->D[i] << F(" m=") << mapping << F("\t");
   }
+//  Serial << endl;
 }
 
