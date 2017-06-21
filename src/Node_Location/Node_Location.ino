@@ -44,7 +44,7 @@ void setup() {
   delay(500);
   
   // start the radio
-  Net.begin(&Dist, 255, GROUPID, RF69_915MHZ, 15); // Higher power setting goofing analogRead()!!
+  Net.begin(&Dist, 255, GROUPID, RF69_915MHZ, 31-0); // Higher power setting goofing analogRead()!!
 
   // wait enough time to get a reprogram signal
   Metro startupDelay(1000UL);
